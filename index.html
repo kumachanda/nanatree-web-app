@@ -217,6 +217,21 @@ input[type="color"] {
 /* 記号だけのボタン（元に戻す/やり直しなど）は少し大きめの記号で */
 .btn-sym { font-size: 16px; line-height: 1; min-width: 30px; }
 
+/* 本家NanaTree風メニューバー */
+.menubar { display: flex; align-items: stretch; background: #f3f4f6; border-bottom: 1px solid var(--border, #d7dbe0); font-size: 13px; }
+.menu { position: relative; }
+.menu-label { border: none; background: transparent; padding: 4px 11px; cursor: pointer; font-size: 13px; color: inherit; }
+.menu-label:hover, .menu.open .menu-label { background: #dfe6ef; }
+.menu-list { display: none; position: absolute; top: 100%; left: 0; z-index: 200; min-width: 230px;
+  background: #fff; border: 1px solid #cfd6df; box-shadow: 0 6px 20px rgba(0,0,0,.16); border-radius: 0 0 6px 6px; padding: 4px; }
+.menu.open .menu-list { display: block; }
+.menu-item { display: flex; justify-content: space-between; gap: 24px; width: 100%; text-align: left;
+  border: none; background: transparent; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; white-space: nowrap; color: inherit; }
+.menu-item:hover:not(:disabled) { background: var(--selected-bg, #e8f0fe); }
+.menu-item:disabled { color: #aab2bd; cursor: default; }
+.menu-item .mi-key { color: #8a94a2; font-size: 12px; }
+.menu-list .menu-sep { height: 1px; background: #e2e6ea; margin: 4px 2px; }
+
 /* アイコンだけのボタンは余白を詰める */
 button > .btn-ico:only-child { margin-right: 0; }
 
@@ -526,6 +541,8 @@ button > .btn-ico:only-child { margin-right: 0; }
 
   <!-- ヘッダーツールバー（ファイル操作） -->
   <header class="app-header">
+    <!-- 本家NanaTree風メニューバー（JSで生成） -->
+    <div class="menubar" id="menubar"></div>
     <div class="toolbar">
       <span class="app-title">NanaTree Web</span>
 
@@ -2830,6 +2847,7 @@ button > .btn-ico:only-child { margin-right: 0; }
     wireKeyboardShortcuts();
     wireTreeKeyboard();
     wireSearch();
+    buildMenuBar();
     window.addEventListener('beforeunload', function (e) {
       if (state.docDirty) { e.preventDefault(); e.returnValue = ''; }
     });
@@ -2842,6 +2860,7 @@ button > .btn-ico:only-child { margin-right: 0; }
 
   function cacheDom() {
     var ids = [
+      'menubar',
       'btnNew', 'btnOpen', 'btnSaveNna', 'btnFileMenu', 'fileMenu',
       'btnNavBack', 'btnNavForward', 'btnUndo', 'btnRedo',
       'replaceInput', 'btnReplaceAll', 'btnReplaceAllDoc',
@@ -3911,6 +3930,166 @@ button > .btn-ico:only-child { margin-right: 0; }
     dom.btnReplaceAll.addEventListener('click', function () { doReplace('note'); });
     dom.btnReplaceAllDoc.addEventListener('click', function () { doReplace('all'); });
     updateNavButtons();
+  }
+
+  // 本家NanaTree風メニューバー（ファイル/ツリー/編集/表示/検索/書式/挿入/ツール/ヘルプ）。
+  // 既存機能に配線し、未実装コマンドは disabled（グレー）で表示する。
+  function showAbout() {
+    window.alert('NanaTree Web\n\n' +
+      'Delphi製アウトライナー NanaTree（作者: Nana氏、2009年オープンソース化）のWeb移植版。\n' +
+      'ブラウザだけで動作・外部通信なし。\n\n' +
+      '対応形式: .nna / .nnz / .nwt / OPML / 階層化テキスト');
+  }
+
+  function buildMenuBar() {
+    if (!dom.menubar) return;
+    function picker(compact) { return function () { pendingCompactImport = !!compact; dom.fileInput.click(); }; }
+    function toggleEl(sel) { return function () { var el = document.querySelector(sel); if (el) el.style.display = (el.style.display === 'none' ? '' : 'none'); }; }
+    function renameSel() { if (state.selectedNode) startRenameForNode(state.selectedNode); }
+    function focusSearch() { dom.searchInput.focus(); dom.searchInput.select(); }
+
+    var MENU = [
+      { label: 'ファイル', items: [
+        { label: '新規作成', key: 'Ctrl+N', fn: newDocument },
+        { label: '開く...', key: 'Ctrl+O', fn: picker(false) },
+        { label: '上書き保存', key: 'Ctrl+S', fn: function () { saveDocumentAs('nna'); } },
+        { label: '名前を付けて保存...', fn: function () { saveDocumentAs('nna'); } },
+        { label: '.nnz（圧縮）で保存...', fn: function () { saveDocumentAs('nnz'); } },
+        { sep: true },
+        { label: '軽量取り込み（.nna）...', fn: picker(true) },
+        { label: '.nwt（軽量）で保存...', fn: saveCompactNwt },
+        { sep: true },
+        { label: 'ページ印刷...', disabled: true },
+        { label: '文書印刷...', disabled: true },
+        { label: 'ページエクスポート...', disabled: true },
+        { label: '文書エクスポート（OPML）...', fn: exportOpml },
+        { label: '文書エクスポート（テキスト）...', fn: exportTreeText },
+      ]},
+      { label: 'ツリー', items: [
+        { label: 'ノード追加', fn: addSiblingNode },
+        { label: '子ノード追加', fn: addChildNode },
+        { label: 'ノード挿入', disabled: true },
+        { label: 'ノード削除', fn: deleteSelectedNode },
+        { sep: true },
+        { label: '上へ移動', fn: moveNodeUp },
+        { label: '下へ移動', fn: moveNodeDown },
+        { label: '階層を上げる', fn: outdentNode },
+        { label: '階層を下げる', fn: indentNode },
+        { sep: true },
+        { label: 'ノードコピー', disabled: true },
+        { label: 'ノード切り取り', disabled: true },
+        { label: 'ノード貼り付け', disabled: true },
+        { label: 'ノード結合', disabled: true },
+        { label: 'ノード分割', disabled: true },
+        { sep: true },
+        { label: 'ソート...', disabled: true },
+        { label: '名前の変更', key: 'F2', fn: renameSel },
+      ]},
+      { label: '編集', items: [
+        { label: '元に戻す', key: 'Ctrl+Z', fn: editorUndo },
+        { label: 'やり直し', key: 'Ctrl+Y', fn: editorRedo },
+        { sep: true },
+        { label: '切り取り', key: 'Ctrl+X', cmd: 'cut' },
+        { label: 'コピー', key: 'Ctrl+C', cmd: 'copy' },
+        { label: '貼り付け', key: 'Ctrl+V', cmd: 'paste' },
+        { label: '形式を選択して貼り付け...', disabled: true },
+        { label: '全て選択', key: 'Ctrl+A', cmd: 'selectAll' },
+      ]},
+      { label: '表示', items: [
+        { label: '書式ツールバー 表示/非表示', fn: toggleEl('#editorToolbar') },
+        { label: 'ツリーツールバー 表示/非表示', fn: toggleEl('.tree-toolbar') },
+        { label: 'ステータスバー 表示/非表示', fn: toggleEl('.status-bar') },
+        { label: 'ルーラー', disabled: true },
+      ]},
+      { label: '検索', items: [
+        { label: '検索...', key: 'Ctrl+F', fn: focusSearch },
+        { label: '次を検索', key: 'F3', fn: searchNext },
+        { label: '前を検索', disabled: true },
+        { label: '置換...', key: 'Ctrl+E', fn: focusSearch },
+      ]},
+      { label: '書式', items: [
+        { label: 'ボールド', key: 'Ctrl+B', cmd: 'bold' },
+        { label: 'イタリック', key: 'Ctrl+I', cmd: 'italic' },
+        { label: '下線', key: 'Ctrl+U', cmd: 'underline' },
+        { label: '取り消し線', cmd: 'strikeThrough' },
+        { sep: true },
+        { label: '左寄せ', cmd: 'justifyLeft' },
+        { label: '中央揃え', cmd: 'justifyCenter' },
+        { label: '右寄せ', cmd: 'justifyRight' },
+        { sep: true },
+        { label: '箇条書き', cmd: 'insertUnorderedList' },
+        { label: '番号付け', cmd: 'insertOrderedList' },
+        { label: '上付き文字', cmd: 'superscript' },
+        { label: '下付き文字', cmd: 'subscript' },
+        { sep: true },
+        { label: 'フォント...', disabled: true },
+        { label: 'フォントスタイル設定...', disabled: true },
+      ]},
+      { label: '挿入', items: [
+        { label: 'リンク挿入', fn: insertNlink },
+        { label: 'リンク解除', fn: unlinkNlink },
+        { sep: true },
+        { label: '画像...', disabled: true },
+        { label: 'オブジェクト...', disabled: true },
+        { label: '表...', disabled: true },
+      ]},
+      { label: 'ツール', items: [
+        { label: '設定...', disabled: true },
+        { label: 'キー割付...', disabled: true },
+      ]},
+      { label: 'ヘルプ', items: [
+        { label: 'バージョン情報...', fn: showAbout },
+      ]},
+    ];
+
+    var bar = dom.menubar;
+    bar.innerHTML = '';
+    var openMenu = null;
+    function closeMenus() { if (openMenu) { openMenu.classList.remove('open'); openMenu = null; } }
+
+    MENU.forEach(function (m) {
+      var menuEl = document.createElement('div');
+      menuEl.className = 'menu';
+      var lab = document.createElement('button');
+      lab.className = 'menu-label';
+      lab.type = 'button';
+      lab.textContent = m.label;
+      menuEl.appendChild(lab);
+      var list = document.createElement('div');
+      list.className = 'menu-list';
+      menuEl.appendChild(list);
+
+      m.items.forEach(function (it) {
+        if (it.sep) { var s = document.createElement('div'); s.className = 'menu-sep'; list.appendChild(s); return; }
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'menu-item';
+        var l = document.createElement('span'); l.className = 'mi-label'; l.textContent = it.label; b.appendChild(l);
+        var k = document.createElement('span'); k.className = 'mi-key'; k.textContent = it.key || ''; b.appendChild(k);
+        if (it.disabled) {
+          b.disabled = true;
+        } else {
+          b.addEventListener('click', function () {
+            closeMenus();
+            if (it.fn) it.fn();
+            else if (it.cmd) execToolbarCommand(it.cmd);
+          });
+        }
+        list.appendChild(b);
+      });
+
+      lab.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (openMenu === menuEl) { closeMenus(); }
+        else { closeMenus(); menuEl.classList.add('open'); openMenu = menuEl; }
+      });
+      lab.addEventListener('mouseenter', function () {
+        if (openMenu && openMenu !== menuEl) { closeMenus(); menuEl.classList.add('open'); openMenu = menuEl; }
+      });
+      bar.appendChild(menuEl);
+    });
+
+    document.addEventListener('click', function (e) { if (!bar.contains(e.target)) closeMenus(); });
   }
 
   // 「ファイル ▾」ドロップダウン
