@@ -1,0 +1,4534 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NanaTree Web</title>
+<!-- 単一ファイル版（iPad対応）: tools/build_standalone.py 生成。編集は app/ 側で。 -->
+<style>
+/* app.css — NanaTree Web版 スタイル（ライトテーマ、外部フォント/CDN不使用） */
+
+:root {
+  --bg: #f4f5f7;
+  --panel-bg: #ffffff;
+  --border: #dcdfe4;
+  --border-strong: #c2c7cf;
+  --text: #202225;
+  --text-muted: #6b7280;
+  --accent: #2f6feb;
+  --accent-weak: #e8f0fe;
+  --danger: #d1373f;
+  --warn-bg: #fff6e0;
+  --warn-border: #e8c766;
+  --warn-text: #7a5b00;
+  --selected-bg: #dbeafe;
+  --hover-bg: #eef1f5;
+  --shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  --radius: 6px;
+  font-size: 14px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Yu Gothic UI", "Meiryo UI", "Segoe UI", "Hiragino Kaku Gothic ProN", sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+button {
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 5px 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+button:hover { background: var(--hover-bg); }
+button:active { background: var(--selected-bg); }
+button.active {
+  background: var(--accent-weak);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+button:disabled { opacity: 0.45; cursor: default; }
+button:disabled:hover { background: var(--panel-bg); }
+
+select, input[type="text"], input[type="search"] {
+  font-family: inherit;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 6px;
+  background: var(--panel-bg);
+  color: var(--text);
+}
+
+input[type="color"] {
+  width: 28px;
+  height: 28px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel-bg);
+  cursor: pointer;
+}
+
+/* ===================== ヘッダー ===================== */
+
+.app-header {
+  flex: 0 0 auto;
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  z-index: 5;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  flex-wrap: wrap;
+}
+
+.toolbar .app-title {
+  font-weight: bold;
+  font-size: 15px;
+  margin-right: 10px;
+  color: var(--accent);
+}
+
+.toolbar .sep {
+  width: 1px;
+  align-self: stretch;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+.toolbar .spacer { flex: 1 1 auto; }
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.search-box input[type="search"] { width: 180px; }
+.search-box .search-count { font-size: 12px; color: var(--text-muted); min-width: 48px; }
+
+/* ===================== 本体レイアウト ===================== */
+
+.app-body {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+}
+
+.tree-pane {
+  flex: 0 0 auto;
+  width: 300px;
+  min-width: 160px;
+  max-width: 70vw;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-bg);
+  border-right: 1px solid var(--border);
+  min-height: 0;
+}
+
+.tree-toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.tree-toolbar button { padding: 4px 7px; font-size: 12px; }
+
+.tree-scroll {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 4px 0;
+  position: relative;
+}
+/* 十字キー操作のためフォーカス可能。枠線は出さず、選択ハイライトで現在位置を示す */
+.tree-scroll:focus { outline: none; }
+.tree-scroll:focus .tree-node-row.selected { box-shadow: inset 0 0 0 1px var(--accent); }
+
+/* 本文中の <nlink> ノードリンク（クリックで同名ノードへジャンプ） */
+.editor-content a.nlink {
+  color: #1558d6;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.editor-content a.nlink:hover { color: #0b3aa0; background: rgba(21, 88, 214, 0.08); }
+/* <nlink> …</nlink> のタグ部分は薄く小さく表示（存在は見えるが目立たない） */
+.editor-content a.nlink .nlink-tag {
+  color: #9aa4b2;
+  font-size: 0.82em;
+  text-decoration: none;
+}
+
+/* 「ファイル ▾」などのドロップダウンメニュー */
+.menu-group { position: relative; display: inline-block; }
+.menu-group .dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 50;
+  margin-top: 2px;
+  min-width: 220px;
+  background: var(--panel-bg, #fff);
+  border: 1px solid var(--border, #cfd6df);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16);
+  padding: 4px;
+}
+.menu-group .dropdown[hidden] { display: none; }
+.menu-group .dropdown button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.menu-group .dropdown button:hover { background: var(--selected-bg, #e8f0fe); }
+.menu-group .dropdown .menu-sep { height: 1px; background: var(--border, #e2e6ea); margin: 4px 2px; }
+
+/* 記号だけのボタン（元に戻す/やり直しなど）は少し大きめの記号で */
+.btn-sym { font-size: 16px; line-height: 1; min-width: 30px; }
+
+/* アイコンだけのボタンは余白を詰める */
+button > .btn-ico:only-child { margin-right: 0; }
+
+.splitter {
+  flex: 0 0 auto;
+  width: 6px;
+  cursor: col-resize;
+  background: var(--border);
+  position: relative;
+}
+.splitter:hover, .splitter.dragging { background: var(--accent); }
+
+.editor-pane {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--panel-bg);
+}
+
+/* ===================== ツリー ===================== */
+
+.tree-node-row {
+  display: flex;
+  align-items: center;
+  height: 26px;
+  padding-right: 8px;
+  cursor: default;
+  user-select: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  margin: 0 4px;
+  position: relative;
+}
+.tree-node-row:hover { background: var(--hover-bg); }
+.tree-node-row.selected { background: var(--selected-bg); border-color: var(--accent); }
+
+.tree-node-row .twisty {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.tree-node-row .twisty.leaf { visibility: hidden; }
+
+.tree-node-row .state-dot {
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.tree-node-row .title {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.tree-node-row .title.empty-title {
+  color: var(--text-muted);
+  font-style: italic;
+}
+.tree-node-row .title-input {
+  flex: 1 1 auto;
+  font-size: 13px;
+  padding: 1px 4px;
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+}
+
+.tree-node-row.drop-before::before,
+.tree-node-row.drop-after::after {
+  content: "";
+  position: absolute;
+  left: 20px;
+  right: 4px;
+  height: 2px;
+  background: var(--accent);
+}
+.tree-node-row.drop-before::before { top: -2px; }
+.tree-node-row.drop-after::after { bottom: -2px; }
+.tree-node-row.drop-inside { background: var(--accent-weak); outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.tree-node-row.focused-marker .title { font-weight: bold; }
+
+/* ===================== エディタ ===================== */
+
+.editor-title-bar {
+  flex: 0 0 auto;
+  padding: 10px 14px 6px;
+  border-bottom: 1px solid var(--border);
+}
+.editor-title-bar input {
+  width: 100%;
+  font-size: 16px;
+  font-weight: bold;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 4px 6px;
+  background: transparent;
+}
+.editor-title-bar input:hover { border-color: var(--border); }
+.editor-title-bar input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--panel-bg);
+}
+
+.editor-toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  background: #fafbfc;
+}
+.editor-toolbar button { padding: 4px 8px; font-size: 13px; min-width: 28px; justify-content: center; }
+.editor-toolbar select { padding: 4px; }
+
+.editor-scroll {
+  flex: 1 1 auto;
+  overflow: auto;
+  min-height: 0;
+  background: #fbfbfc;
+}
+
+.editor-content {
+  min-height: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 32px;
+  background: var(--panel-bg);
+  outline: none;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.editor-content:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-muted);
+}
+.editor-content a.nana-nlink {
+  color: var(--accent);
+  text-decoration: underline dotted;
+  cursor: pointer;
+}
+
+.editor-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* ===================== バナー ===================== */
+
+.banner {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.banner.banner-error {
+  background: #fdecec;
+  color: #7a1512;
+  border-bottom: 1px solid #f2b8b5;
+}
+.banner.banner-info {
+  background: var(--warn-bg);
+  color: var(--warn-text);
+  border-bottom: 1px solid var(--warn-border);
+}
+.banner button {
+  padding: 3px 9px;
+  font-size: 12px;
+}
+.banner .banner-spacer { flex: 1 1 auto; }
+.banner[hidden] { display: none; }
+
+/* ===================== ステータスバー ===================== */
+
+.status-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--panel-bg);
+  border-top: 1px solid var(--border);
+}
+.status-bar .status-message { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.status-bar .status-message.warn { color: var(--danger); font-weight: bold; }
+
+/* ===================== コンテキストメニュー ===================== */
+
+.context-menu {
+  position: fixed;
+  z-index: 100;
+  background: var(--panel-bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 4px;
+  min-width: 170px;
+  display: none;
+}
+.context-menu.open { display: block; }
+.context-menu button {
+  display: flex;
+  width: 100%;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 10px;
+  justify-content: flex-start;
+  background: transparent;
+}
+.context-menu button:hover { background: var(--hover-bg); }
+.context-menu .menu-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 2px;
+}
+
+/* ===================== ドラッグ&ドロップ オーバーレイ ===================== */
+
+.dnd-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(47, 111, 235, 0.08);
+  border: 3px dashed var(--accent);
+  z-index: 200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: var(--accent);
+  font-weight: bold;
+  pointer-events: none;
+}
+.dnd-overlay.active { display: flex; }
+
+/* ===================== 可視性ユーティリティ ===================== */
+
+[hidden] { display: none !important; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+</style>
+<style>
+/* NanaTree オープンソース同梱のBMPアイコンを透過PNG化して埋め込み（tools/make_icons.py 生成） */
+.btn-ico{display:inline-block;width:16px;height:16px;background-size:contain;background-repeat:no-repeat;background-position:center;vertical-align:-3px;margin-right:5px;}
+.ico-new{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAZklEQVR42u1TQQ7AIAhrF1/F63gd32InlkwN4rzOE7FQSpPS4Th5LQqCW0wO54sAANy1NEzqqGAGTjd3S9qqoezBryBXkJGWFGRnlT0I4h7fUkAqzAwi8mBX1awYHv4jjV/DxNM43/UnMoL+ENKbAAAAAElFTkSuQmCC");}
+.ico-open{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAnElEQVR42qWTURKEIAxDX3e8l96McjM8WfZDEVFnhaUMEz5I2qZgQozEh8EYFpjyIbpVvQSXNQtEN4UAIMAAEbFHc27C7khCW7yjOxJl7R6UzO/46MFvUoy5aqv8Ci6brhVcL4OxLIl5XljXGs1NlQfuKKUkqQ2BLHAyqIMsVKbQQ96YlUBf+Zl8CPzT+yGg3Yd9FE37/JBs9Dt/AXOrUA35NBxkAAAAAElFTkSuQmCC");}
+.ico-add-sibling{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAUUlEQVR42s1Tyw4AMARrF///y3baReI1F04i0mpBhWIS5yUEv5DEFipACqULYBsygtNldz3ImMsedCeRjv5Uwp41hsfJQMKeNYIDgO4UnL7zBQ7sGiyWeawSAAAAAElFTkSuQmCC");}
+.ico-add-child{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAU0lEQVR42sWSOQ7AQAwCh8j//zJp09jeI6ulRohLxuzgYRMBIJTaMFYrkJEq4d8inO+gg74zCrkr7UyE1QWMFQ2jCJ84mC00steNCtURNDnjlSe+cZYYK2nDLsAAAAAASUVORK5CYII=");}
+.ico-insert-node{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAUUlEQVR42s1TQQoAIAjbpP9/2S51iYx0BO0kInNzSIdDgc2CYImprY0bIoczJBgTMRhYqNqwSFr5BjuZKYKsCoOINzGebKwLPo0xo0SOkeo7d7mSGiwMWE7KAAAAAElFTkSuQmCC");}
+.ico-move-up{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAATElEQVR42tWTMQ4AIAgDr/7/z3U1RgNiHGTvUdogY26mcTlvAUIuAzLiLSArBtDcQkZsrKWDk81vWhitlTOYT4mgLQqpnEEWov+fqQPvuRgWHl9uZQAAAABJRU5ErkJggg==");}
+.ico-move-down{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAUElEQVR42s2TQQ4AIQwCB///Z7yaZtWaRrPcoVBaGVNBo4j7AkIuO1iJpCPMRDS2sLMLYKzSEuOQ9zXGCNpd4mg5ko8cfJHTAjNyKsL/n6kDB7UYFjc4S88AAAAASUVORK5CYII=");}
+.ico-outdent{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAARUlEQVR42tWTMQ4AIAwCgf//GVdjUttoNClruZsoDeMmwmXeCgiaoI8EM7iTKIMziarF6KYqHHUY7WAtGmbDHXwRsP8zDT4fEyIuxO5MAAAAAElFTkSuQmCC");}
+.ico-indent{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAS0lEQVR42tVTyw4AIAgC1///sl2tzUfzUHEFmTClQtGBoIm2wfAIgks2hfLNCPcNaO9gL86DLVQqTUcayQQZJ1Xh8R3YgWgr/v9ME0kQHBKQn0+/AAAAAElFTkSuQmCC");}
+.ico-merge{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAQElEQVR42mP8z/CfgRLAxEAhGHgDWGAMRgZGkgLjP8N/RhQDoKLEAcbBG4iMRNI4DfhPJD040wEuPxKM0aGfmQCYWw0itssJegAAAABJRU5ErkJggg==");}
+.ico-split{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAUUlEQVR42s2TwQoAIAxCNfr/X7ZLUUHRwg55cQTzYG8UBEe5DQSvkgRxCqivMbGPCaYeBzDo44r7C791YIOkWtTJB5DSArGY/9fBDpTjWbggFTJSFyEHECg1AAAAAElFTkSuQmCC");}
+.ico-navi-prev{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAgUlEQVR42q2TSxKAIAxDk473Vk8eN8AIBSpqdzDNa6YfCkIbBP0nAEF0uXdAER7ox+FBBUBQQ2EHlCG2LE6A7NZmedoVsmxUPRQnF/a2co4tErdvnvUkDR/DOeDJqmpb0TWx9xmJKoAg9qYQQtIyTXvwxImV3V7cxLzK/x3T23O+AFjAPhZzkiCcAAAAAElFTkSuQmCC");}
+.ico-navi-next{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAfklEQVR42q2TSxLAIAhDA9N7a0+ebtRRwfppWQoJzwGEIPoQiH0EQFBMbW1QhBF+RGtUDATCodAxyia6LU4GmVZntQx8zetKd9ckUegq9Yjk2kFmIORuJ6n4GIag71AT9bktAk8MAEpQZlNwxWmZ9LRz84UVitEq/3dMp+f8AKrVPhYxvcSRAAAAAElFTkSuQmCC");}
+.ico-link{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAUklEQVR42sWTOwoAMAxCNfT+V06nDC39W4hLliA+UDocigyi/hkQe5bRj508XSE4QMkgEvR3ltJ2zA5whbU0GOGEaV4PeiQ5AdUtlJfyNDjpa6zw0hgaOKhG6QAAAABJRU5ErkJggg==");}
+.ico-picture{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA/ElEQVR42mP8z/CfgRLAxEAhYGFgYGAor1tLljM6m4IZWWCcW9ZBWBUFKzIyxKiiii25zcBwecla4r2w5DYqH9lAFnTFBw9rMEiIGDMEWi5jYGBgYLj+HrshGIGoJcDIcPN6NMMfjscMT75sYHj8Yj6DpiADHBOMhWN3shmefNkAl9hwOZvhyfutKIrzFqkztG2LwowFBgYGhitvlzCw87GiSPaejGJQ4ONnyLd6xNC2LQrquscMu67PZ5Bk4CMuEB98+sgw8Zgcw2umrXALNlzOxnSBAh8/XoPg8nxQgXtoBggI8pGfEhkYGBhkhAQpM0BsdwFZBjAOeG4EAIkmRc1bpimhAAAAAElFTkSuQmCC");}
+.ico-table{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAPElEQVR42mP8z/CfgRLAxEAhYIExGBkYSXbKf4b/jCwoAv8RZjAyMhLkU8ULjLBAHPXCqBcG1AuMlGZnAE9gPxl2pMCSAAAAAElFTkSuQmCC");}
+.ico-fontstyle{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAeUlEQVR42q1TSQ7AIAicMf7b+HJ6aEjRUrC1JF501kQoEOxMWQEREMJ3KivkzwkyciigZAE43nchuoQCEXnG1ij2WKHnFayzPUoWND4KZLE9svJuvVTE63xhTsE6O2bOs2h5Q3axdhe8yFZkfhc0cneZavZRovklwQFBqjqd0iYWzQAAAABJRU5ErkJggg==");}
+.ico-fonta{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAdUlEQVR42s2TUQ7AIAhDW0+OJ+++TJgDdPNnJUYTI30oUhBO1HCoMgFBfU7QrcvPqUl2B95dEF8RzK4VRUgw3AXRr7cIhtt8IKN4EESOFUXLXAhqjJJCLgAIgIR7mJmyvbaqffVCFPTouKj+gJxlI/3jM+3oAtd7Xn7xNvuTAAAAAElFTkSuQmCC");}
+.ico-subscript{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAARCAYAAADUryzEAAAAYElEQVR42t2TwQrAMAhDE///n7OT0Epkk566XAq2Lw2KFIQTBQ71JwOCIrh11NVaA0FMaD2z3ol1jOuPb7DtQUJf4HECdxfuQe3HClXT6GBnYic12QWCahNMTLZU92/jA5r/NhmOQMQMAAAAAElFTkSuQmCC");}
+.ico-superscript{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAARCAYAAADUryzEAAAAYUlEQVR42t2TwQrAMAhDE9n//3J2shTrQPFQmEdtnrEiBWEShmE8nccEl11BbDsQRBeOHRwAL+4dslx0YLHgokzs+d0J4xqzj2qt0UUVcQqII7QAce4KxL7EVQiv38IPAC8BUzEhN0fOgQAAAABJRU5ErkJggg==");}
+
+</style>
+<style>
+/* 自作ツールバーアイコン（整列・保存）: tools/make_custom_icons.py 生成 */
+.ico-align-left{background-image:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxNiAxNic+PGcgZmlsbD0nIzNhM2Y0NSc+PHJlY3QgeD0nMicgeT0nMi42JyB3aWR0aD0nMTInIGhlaWdodD0nMS42JyByeD0nLjYnLz48cmVjdCB4PScyJyB5PSc2LjEnIHdpZHRoPSc4JyBoZWlnaHQ9JzEuNicgcng9Jy42Jy8+PHJlY3QgeD0nMicgeT0nOS42JyB3aWR0aD0nMTInIGhlaWdodD0nMS42JyByeD0nLjYnLz48cmVjdCB4PScyJyB5PScxMy4xJyB3aWR0aD0nOCcgaGVpZ2h0PScxLjYnIHJ4PScuNicvPjwvZz48L3N2Zz4=");}
+.ico-align-center{background-image:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxNiAxNic+PGcgZmlsbD0nIzNhM2Y0NSc+PHJlY3QgeD0nMicgeT0nMi42JyB3aWR0aD0nMTInIGhlaWdodD0nMS42JyByeD0nLjYnLz48cmVjdCB4PSc0JyB5PSc2LjEnIHdpZHRoPSc4JyBoZWlnaHQ9JzEuNicgcng9Jy42Jy8+PHJlY3QgeD0nMicgeT0nOS42JyB3aWR0aD0nMTInIGhlaWdodD0nMS42JyByeD0nLjYnLz48cmVjdCB4PSc0JyB5PScxMy4xJyB3aWR0aD0nOCcgaGVpZ2h0PScxLjYnIHJ4PScuNicvPjwvZz48L3N2Zz4=");}
+.ico-align-right{background-image:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxNiAxNic+PGcgZmlsbD0nIzNhM2Y0NSc+PHJlY3QgeD0nMicgeT0nMi42JyB3aWR0aD0nMTInIGhlaWdodD0nMS42JyByeD0nLjYnLz48cmVjdCB4PSc2JyB5PSc2LjEnIHdpZHRoPSc4JyBoZWlnaHQ9JzEuNicgcng9Jy42Jy8+PHJlY3QgeD0nMicgeT0nOS42JyB3aWR0aD0nMTInIGhlaWdodD0nMS42JyByeD0nLjYnLz48cmVjdCB4PSc2JyB5PScxMy4xJyB3aWR0aD0nOCcgaGVpZ2h0PScxLjYnIHJ4PScuNicvPjwvZz48L3N2Zz4=");}
+.ico-save{background-image:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxNiAxNic+PGcgZmlsbD0nbm9uZScgc3Ryb2tlPScjM2EzZjQ1JyBzdHJva2Utd2lkdGg9JzEuMScgc3Ryb2tlLWxpbmVqb2luPSdyb3VuZCc+PHBhdGggZD0nTTIuNCAyLjRoOC4ybDMgM3Y4LjJhLjYuNiAwIDAgMS0uNi42SDNhLjYuNiAwIDAgMS0uNi0uNnonLz48cGF0aCBkPSdNNSAyLjZ2My4yaDVWMi42JyBmaWxsPScjM2EzZjQ1JyBzdHJva2U9J25vbmUnLz48cmVjdCB4PSc0LjYnIHk9JzguNicgd2lkdGg9JzYuOCcgaGVpZ2h0PSc0LjQnIHJ4PScuNCcvPjwvZz48L3N2Zz4=");}
+
+</style>
+</head>
+<body>
+
+  <!-- ヘッダーツールバー（ファイル操作） -->
+  <header class="app-header">
+    <div class="toolbar">
+      <span class="app-title">NanaTree Web</span>
+
+      <button id="btnNew" title="新規作成"><span class="btn-ico ico-new"></span></button>
+      <button id="btnOpen" title="開く (Ctrl+O)"><span class="btn-ico ico-open"></span></button>
+      <button id="btnSaveNna" title="上書き保存 (Ctrl+S)"><span class="btn-ico ico-save"></span></button>
+
+      <span class="menu-group">
+        <button id="btnFileMenu" title="その他のファイル操作（保存形式・取り込み・書き出し）">ファイル ▾</button>
+        <div class="dropdown" id="fileMenu" hidden>
+          <button data-fm="saveAsNna" title="名前を付けて .nna 形式で保存">名前を付けて保存 (.nna)</button>
+          <button data-fm="saveNnz" title="圧縮した .nnz 形式で保存">保存 (.nnz・圧縮)</button>
+          <div class="menu-sep"></div>
+          <button data-fm="importCompact" title="巨大な.nnaを画像PNG化して軽量に取り込む（Python不要）">軽量取り込み (.nna)</button>
+          <button data-fm="saveNwt" title="今の内容を軽量な .nwt として保存（次回から高速）">.nwt で保存（軽量）</button>
+          <div class="menu-sep"></div>
+          <button data-fm="exportOpml" title="OPML（バナナツリー形式）で書き出し">OPML書き出し（バナナツリー用）</button>
+          <button data-fm="exportTxt" title="階層化テキスト（NanaTree互換・CP932）で書き出し">テキスト書き出し</button>
+        </div>
+      </span>
+
+      <span class="sep"></span>
+
+      <button id="btnNavBack" title="前に見ていたノードへ戻る (Alt+←)"><span class="btn-ico ico-navi-prev"></span></button>
+      <button id="btnNavForward" title="次に見ていたノードへ進む (Alt+→)"><span class="btn-ico ico-navi-next"></span></button>
+      <button id="btnUndo" title="元に戻す (Ctrl+Z)" class="btn-sym">↶</button>
+      <button id="btnRedo" title="やり直し (Ctrl+Y)" class="btn-sym">↷</button>
+
+      <span class="sep"></span>
+
+      <div class="search-box">
+        <input type="search" id="searchInput" placeholder="検索（タイトル・本文）">
+        <button id="btnSearchNext" title="次を検索">次を検索</button>
+        <span class="search-count" id="searchCount"></span>
+        <input type="search" id="replaceInput" placeholder="置換後の文字">
+        <button id="btnReplaceAll" title="開いている項目の中を、検索文字→置換後の文字ですべて置換">置換</button>
+        <button id="btnReplaceAllDoc" title="すべての項目を通して、検索文字→置換後の文字ですべて置換">全体置換</button>
+      </div>
+
+      <span class="spacer"></span>
+      <span id="docTitleDisplay" style="color:var(--text-muted); font-size:12px;"></span>
+    </div>
+  </header>
+
+  <!-- rtf.js 不在時のエラーバナー -->
+  <div class="banner banner-error" id="rtfMissingBanner" hidden>
+    <span>
+      リッチテキスト変換モジュール（rtf.js）が読み込まれていません。
+      本文の表示・編集、および .nna/.nnz ファイルの読み込み・保存はできません。
+      ツリー操作と OPML の読み込み・書き出しは利用できます。
+    </span>
+  </div>
+
+  <!-- 自動保存からの復元案内バナー -->
+  <div class="banner banner-info" id="autosaveBanner" hidden>
+    <span>前回の自動保存データが見つかりました。復元しますか？</span>
+    <span class="banner-spacer"></span>
+    <button id="btnAutosaveRestore">復元する</button>
+    <button id="btnAutosaveDiscard">破棄する</button>
+  </div>
+
+  <!-- 本体: ツリーペイン | スプリッタ | エディタペイン -->
+  <div class="app-body" id="appBody">
+
+    <section class="tree-pane" id="treePane" style="width:300px;">
+      <div class="tree-toolbar">
+        <button id="btnAddSibling" title="弟ノードを追加（同じ階層）"><span class="btn-ico ico-add-sibling"></span></button>
+        <button id="btnAddChild" title="子ノードを追加（下の階層）"><span class="btn-ico ico-add-child"></span></button>
+        <button id="btnDeleteNode" title="ノードを削除">削除</button>
+        <button id="btnMoveUp" title="上へ移動"><span class="btn-ico ico-move-up"></span></button>
+        <button id="btnMoveDown" title="下へ移動"><span class="btn-ico ico-move-down"></span></button>
+        <button id="btnOutdent" title="階層を上げる（左へ）"><span class="btn-ico ico-outdent"></span></button>
+        <button id="btnIndent" title="階層を下げる（右へ）"><span class="btn-ico ico-indent"></span></button>
+      </div>
+      <div class="tree-scroll" id="treeScroll">
+        <div id="treeRoot" role="tree"></div>
+      </div>
+    </section>
+
+    <div class="splitter" id="splitter"></div>
+
+    <section class="editor-pane" id="editorPane">
+      <div class="editor-title-bar">
+        <input type="text" id="nodeTitleInput" placeholder="（ノード未選択）" disabled>
+      </div>
+      <div class="editor-toolbar" id="editorToolbar">
+        <button data-cmd="bold" title="太字"><b>B</b></button>
+        <button data-cmd="italic" title="斜体"><i>I</i></button>
+        <button data-cmd="underline" title="下線"><u>U</u></button>
+        <button data-cmd="strikeThrough" title="取り消し線"><s>S</s></button>
+        <span class="sep"></span>
+        <select id="fontSizeSelect" title="フォントサイズ">
+          <option value="1">小 (10pt)</option>
+          <option value="2">やや小 (13pt)</option>
+          <option value="3" selected>標準 (16pt)</option>
+          <option value="4">やや大 (18pt)</option>
+          <option value="5">大 (24pt)</option>
+          <option value="6">特大 (32pt)</option>
+          <option value="7">最大 (48pt)</option>
+        </select>
+        <input type="color" id="foreColorInput" title="文字色" value="#000000">
+        <input type="color" id="hiliteColorInput" title="蛍光ペン（背景色）" value="#ffff00">
+        <button id="btnHiliteOff" title="蛍光ペンを外す">蛍光OFF</button>
+        <span class="sep"></span>
+        <button data-cmd="justifyLeft" title="左揃え"><span class="btn-ico ico-align-left"></span></button>
+        <button data-cmd="justifyCenter" title="中央揃え"><span class="btn-ico ico-align-center"></span></button>
+        <button data-cmd="justifyRight" title="右揃え"><span class="btn-ico ico-align-right"></span></button>
+        <span class="sep"></span>
+        <button data-cmd="insertUnorderedList" title="箇条書き">・リスト</button>
+        <button data-cmd="insertOrderedList" title="番号付きリスト">1.リスト</button>
+        <span class="sep"></span>
+        <button data-cmd="subscript" title="下付き文字">X₂</button>
+        <button data-cmd="superscript" title="上付き文字">X²</button>
+        <span class="sep"></span>
+        <button id="btnInsertLink" title="選択した見出し名をノードへのリンクにする（同名ノードへジャンプ）"><span class="btn-ico ico-link"></span></button>
+        <button id="btnUnlink" title="カーソル位置のリンクをふつうの文字に戻す">リンク解除</button>
+        <span class="sep"></span>
+        <button id="btnRemoveFormat" title="書式クリア">書式クリア</button>
+      </div>
+      <div class="editor-scroll">
+        <div class="editor-content" id="editorContent" contenteditable="false"
+             data-placeholder="ノードを選択すると本文を編集できます。"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ステータスバー -->
+  <footer class="status-bar">
+    <span class="status-message" id="statusMessage">準備完了</span>
+    <span id="autosaveStatus"></span>
+  </footer>
+
+  <!-- コンテキストメニュー（ツリー右クリック） -->
+  <div class="context-menu" id="contextMenu">
+    <button data-action="addSibling">弟ノードを追加</button>
+    <button data-action="addChild">子ノードを追加</button>
+    <button data-action="rename">名前の変更 (F2)</button>
+    <div class="menu-sep"></div>
+    <button data-action="moveUp">上へ移動</button>
+    <button data-action="moveDown">下へ移動</button>
+    <button data-action="outdent">階層を上げる</button>
+    <button data-action="indent">階層を下げる</button>
+    <div class="menu-sep"></div>
+    <button data-action="delete">削除</button>
+  </div>
+
+  <!-- ドラッグ&ドロップ（ファイルをウィンドウへ） オーバーレイ -->
+  <div class="dnd-overlay" id="dndOverlay">ここにファイルをドロップして開く（.nna / .nnz / .nwt / .opml / .xml / .txt）</div>
+
+  <!-- ファイルを開くための隠しinput -->
+  <input type="file" id="fileInput" class="visually-hidden"
+         accept=".nna,.nnz,.nwt,.opml,.xml,.txt" tabindex="-1">
+
+  <!-- スクリプト読み込み（classicスクリプト。file:// でも動作。ESモジュール不使用） -->
+  <script>
+/*
+ * core.js — NanaTree Web版 純粋ロジック層（DOM描画・イベント処理は一切行わない）
+ *
+ * 責務:
+ *   - .nna 形式（文字列レベル。CP932バイト変換は呼び出し側=app.jsが window.NanaRTF で行う）の
+ *     パース/シリアライズ: parseNna / serializeNna
+ *   - OPML（Androidアプリ「バナナツリー」方言）のパース/生成: parseOpml / buildOpml
+ *   - ツリーデータ構造（Node）に対する小さな純粋ヘルパー
+ *
+ * classic <script> として読み込む前提（ES modules不使用）。ここで宣言する関数・定数は
+ * すべてトップレベルの var/function 宣言となり、グローバル（window直下）に現れる。
+ *
+ * 依存: DOMParser（ブラウザ標準。parseOpml / htmlToPlainText の実装に使用）。
+ * 依存しないもの: window.NanaRTF、localStorage、fetch、その他あらゆるDOM描画API。
+ * core-test.html はこのファイル単体で（NanaRTF無しで）動作する。
+ */
+
+(function (global) {
+  'use strict';
+
+  // =====================================================================
+  // 共通ユーティリティ
+  // =====================================================================
+
+  var _nodeIdCounter = 1;
+
+  /** 新しい一意ノードIDを1個払い出す（localStorageからの復元時など、既存オブジェクトへ
+   *  IDを付け直したい場合に使用。createNode() 内部でも同じカウンタを使う）。 */
+  function nextNodeId() {
+    return 'n' + (_nodeIdCounter++);
+  }
+
+  /**
+   * 新規ノードを生成する（.nna読込・OPML読込・UIでの新規追加、すべてこの関数を通す）。
+   * データモデル:
+   *   { id, title, rtf, html, dirty, stateIndex, expanded, focused, children }
+   * rtf/html/dirty/stateIndex/expanded/children はタスク仕様に明記されたフィールド。
+   * id と focused は実装上の必要から追加したフィールド（後述レポートで明記）。
+   *   - id: DOM要素とデータノードを対応付けるための一意キー（アプリUI層で使用）。
+   *   - focused: .nna の <attribute> 3項目め（フォーカス状態）を無劣化で読み書きするための保持領域。
+   */
+  function createNode(title) {
+    return {
+      id: 'n' + (_nodeIdCounter++),
+      title: title == null ? '' : title,
+      rtf: '',
+      html: null,
+      dirty: false,
+      stateIndex: -1,
+      expanded: false,
+      focused: false,
+      children: []
+    };
+  }
+
+  /** ツリー全体を深さ優先（先行順）で走査し、各ノードに callback(node, parent, depth) を呼ぶ。 */
+  function walkTree(roots, callback) {
+    function rec(nodes, parent, depth) {
+      for (var i = 0; i < nodes.length; i++) {
+        var node = nodes[i];
+        callback(node, parent, depth);
+        if (node.children && node.children.length) {
+          rec(node.children, node, depth + 1);
+        }
+      }
+    }
+    rec(roots || [], null, 0);
+  }
+
+  /** タイトル照合用の正規化: NFKC（全角/半角の統一）＋空白除去＋小文字化。
+   *  例「図2ｂ：右側」も「図2b:右側」も同じキーになる。 */
+  function normalizeTitle(s) {
+    return String(s == null ? '' : s).normalize('NFKC').replace(/\s+/g, '').toLowerCase();
+  }
+
+  /** タイトルが一致する最初のノードを深さ優先で探す（<nlink>ジャンプ用）。見つからなければ null。
+   *  完全一致を優先し、無ければ正規化一致（全角/半角・空白の違いを無視）で探す。
+   *  同名が複数あれば、いずれも深さ優先で最初のものを返す（NanaTree本家と同じ挙動）。 */
+  function findNodeByTitleDFS(roots, title) {
+    var exact = null, norm = null;
+    var target = normalizeTitle(title);
+    function rec(nodes) {
+      for (var i = 0; i < nodes.length; i++) {
+        var node = nodes[i];
+        if (exact === null && node.title === title) exact = node;
+        if (norm === null && normalizeTitle(node.title) === target) norm = node;
+        if (exact) return; // 完全一致が見つかればそれ以上探さない
+        if (node.children && node.children.length) {
+          rec(node.children);
+          if (exact) return;
+        }
+      }
+    }
+    rec(roots || []);
+    return exact || norm;
+  }
+
+  /** focused===true の最初のノードを深さ優先で探す（ファイルを開いた時の選択状態復元用）。 */
+  function findFocusedNode(roots) {
+    var found = null;
+    walkTree(roots, function (node) {
+      if (!found && node.focused) found = node;
+    });
+    return found;
+  }
+
+  // =====================================================================
+  // .nna / .nnz パーサ・シリアライザ（文字列レベル）
+  // =====================================================================
+
+  var NNA_TAG_CHAPTER = '<chapter>';
+  var NNA_TAG_ATTR = '<attribute>';
+  var NNA_TAG_GROUP = '<group>';
+  var NNA_TAG_UNGROUP = '</group>';
+  var NNA_TAG_CONTENT = '<content>';
+  var NNA_TAG_UNCONTENT = '</content>';
+
+  /**
+   * Delphi の TStrings.SetTextStr と同じ規則で行分割する:
+   *   - CR、LF、CRLF のいずれも改行として扱う。
+   *   - テキストが改行で終わっていても、末尾に余分な空行は生成しない
+   *     （ちょうど文字列末尾で走査ループが終わるため）。
+   * これにより readme.nna のように末尾が "</content>\r\n" で終わるファイルを
+   * 読み込んでも、末尾に余分な空要素が入らない（Delphi実装と挙動を一致させる）。
+   */
+  function _nnaSplitLines(text) {
+    var lines = [];
+    var i = 0;
+    var n = text.length;
+    while (i < n) {
+      var start = i;
+      while (i < n && text.charAt(i) !== '\r' && text.charAt(i) !== '\n') i++;
+      lines.push(text.slice(start, i));
+      if (text.charAt(i) === '\r') i++;
+      if (text.charAt(i) === '\n') i++;
+    }
+    return lines;
+  }
+
+  /**
+   * 行配列を .nna 形式のテキストへ結合する。
+   * Delphi の TStrings.GetTextStr は「各要素の直後（最後の要素も含む）」に改行を付与するため、
+   * 生成するテキストは常に末尾に CRLF を持つ（readme.nna 実物で確認済み、末尾バイトが
+   * "...</content>\x0D\x0A" であることを Format-Hex で確認）。
+   */
+  function _nnaJoinLines(lines) {
+    var out = '';
+    for (var i = 0; i < lines.length; i++) {
+      out += lines[i] + '\r\n';
+    }
+    return out;
+  }
+
+  /**
+   * .nna形式のテキスト（CP932デコード済みのJS文字列）をパースしてツリーを構築する。
+   * 戻り値: { roots: [Node, ...] }
+   *
+   * タグの意味（FormTree.pas 241-247, 1268-1310, 249-430 で確認済み）:
+   *   <chapter>タイトル       … 新ノード。直後に <attribute> 行が続く前提。
+   *   <attribute>a,b,c        … a=stateIndex, b=「親ノードの開閉状態」(自ノードではない),
+   *                             c=フォーカス。行欠落・項目不足には寛容（デフォルト -1,1,0）。
+   *   <content> ... </content>… 本文RTF（複数行、CRLFで結合して1つの文字列に）。
+   *   <group> / </group>      … 直前ノードの子階層に降りる／親階層に戻る。入れ子可。
+   */
+  function parseNna(text) {
+    var lines = _nnaSplitLines(text || '');
+    var roots = [];
+    var current = null;
+    var ancestorStack = [];
+    var i = 0;
+    var n = lines.length;
+
+    function siblingsArray() {
+      return ancestorStack.length
+        ? ancestorStack[ancestorStack.length - 1].children
+        : roots;
+    }
+
+    function applyAttribute(node, attrLine) {
+      var a = -1, b = 1, c = 0; // 寛容なデフォルト値（仕様指定）
+      if (typeof attrLine === 'string' && attrLine.indexOf(NNA_TAG_ATTR) === 0) {
+        var rest = attrLine.slice(NNA_TAG_ATTR.length);
+        var parts = rest.split(',');
+        if (parts.length > 0 && parts[0].trim() !== '') {
+          var va = parseInt(parts[0], 10);
+          if (!isNaN(va)) a = va;
+        }
+        if (parts.length > 1 && parts[1].trim() !== '') {
+          var vb = parseInt(parts[1], 10);
+          if (!isNaN(vb)) b = vb;
+        }
+        if (parts.length > 2 && parts[2].trim() !== '') {
+          var vc = parseInt(parts[2], 10);
+          if (!isNaN(vc)) c = vc;
+        }
+      }
+      node.stateIndex = a;
+      node.focused = c === 1;
+      // b は「このノードの親」の開閉状態。ルートノード（ancestorStackが空）の場合は
+      // 非表示ルートの状態を表すだけなので、どのノードのフィールドにも反映しない。
+      if (b === 1 && ancestorStack.length) {
+        ancestorStack[ancestorStack.length - 1].expanded = true;
+      }
+    }
+
+    while (i < n) {
+      var line = lines[i];
+
+      if (line === NNA_TAG_GROUP) {
+        // 直前ノード(current)の子階層へ降りる。current が無い場合は無視（壊れたファイルへの耐性）。
+        if (current) ancestorStack.push(current);
+        i++;
+        continue;
+      }
+
+      if (line === NNA_TAG_UNGROUP) {
+        if (ancestorStack.length) current = ancestorStack.pop();
+        i++;
+        continue;
+      }
+
+      if (typeof line === 'string' && line.indexOf(NNA_TAG_CHAPTER) === 0) {
+        var title = line.slice(NNA_TAG_CHAPTER.length);
+        var node = createNode(title);
+        siblingsArray().push(node);
+        current = node;
+        i++;
+        if (i < n && lines[i].indexOf(NNA_TAG_ATTR) === 0) {
+          applyAttribute(node, lines[i]);
+          i++;
+        } else {
+          // <attribute> 行が欠落している場合はデフォルト値を適用し、
+          // 現在行は消費せず再度メインループで処理する（<content>等の可能性があるため）。
+          applyAttribute(node, null);
+        }
+        continue;
+      }
+
+      if (line === NNA_TAG_CONTENT) {
+        i++;
+        var bodyLines = [];
+        while (i < n && lines[i] !== NNA_TAG_UNCONTENT) {
+          bodyLines.push(lines[i]);
+          i++;
+        }
+        if (current) {
+          current.rtf = bodyLines.length ? bodyLines.join('\r\n') : '';
+        }
+        if (i < n && lines[i] === NNA_TAG_UNCONTENT) i++;
+        continue;
+      }
+
+      // 未知の行（壊れたファイル、あるいは想定外の内容）は無視して先へ進む。クラッシュさせない。
+      i++;
+    }
+
+    return { roots: roots };
+  }
+
+  /**
+   * ツリー（{roots: [...]})）を .nna形式のテキストへシリアライズする。
+   * doc.title は .nna 形式には存在しないため使用しない（ファイル名側で管理）。
+   *
+   * b（親の開閉状態）の書き出し規則:
+   *   - ルートノード: 常に 1（Delphi版は非表示ルートを常に展開扱いとして書き出す）。
+   *   - それ以外: 親ノードの expanded フラグをそのまま反映（親の実際の子のうち、
+   *     いずれかが b=1 を報告していれば親.expanded=true になっている＝Delphiの
+   *     「1つの共有boolean」を複数の子が同じ値で書き出す挙動と一致するため、
+   *     本物のNanaTreeファイルに対しては常にラウンドトリップが成立する）。
+   * c（フォーカス）はノードごとに focused フィールドをそのまま書き戻す。
+   * 本文が空（rtfが null/undefined/''）の場合は <content></content> の間に行を出力しない
+   * （Delphi版の `if Data.Strings.Text <> '' then SL.Add(...)` と同じ挙動）。
+   */
+  function serializeNna(doc) {
+    var lines = [];
+    var roots = (doc && doc.roots) || [];
+
+    function walk(nodes, isRootLevel, parentNode) {
+      for (var i = 0; i < nodes.length; i++) {
+        var node = nodes[i];
+        lines.push(NNA_TAG_CHAPTER + (node.title == null ? '' : node.title));
+
+        var stateIndex = typeof node.stateIndex === 'number' && isFinite(node.stateIndex)
+          ? node.stateIndex : -1;
+        var b = isRootLevel ? 1 : (parentNode && parentNode.expanded ? 1 : 0);
+        var c = node.focused ? 1 : 0;
+        lines.push(NNA_TAG_ATTR + stateIndex + ',' + b + ',' + c);
+
+        lines.push(NNA_TAG_CONTENT);
+        var rtf = node.rtf;
+        if (rtf !== null && rtf !== undefined && rtf !== '') {
+          lines.push(rtf);
+        }
+        lines.push(NNA_TAG_UNCONTENT);
+
+        if (node.children && node.children.length) {
+          lines.push(NNA_TAG_GROUP);
+          walk(node.children, false, node);
+          lines.push(NNA_TAG_UNGROUP);
+        }
+      }
+    }
+
+    walk(roots, true, null);
+    return _nnaJoinLines(lines);
+  }
+
+  // =====================================================================
+  // HTML <-> プレーンテキスト（OPML本文用、及び検索用に流用可）
+  // =====================================================================
+
+  function escapeHtmlText(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  var _BLOCK_TAGS = {
+    DIV: 1, P: 1, LI: 1, UL: 1, OL: 1, TABLE: 1, TR: 1, TD: 1, TH: 1,
+    H1: 1, H2: 1, H3: 1, H4: 1, H5: 1, H6: 1, BLOCKQUOTE: 1
+  };
+
+  /**
+   * contenteditable由来のHTML断片をプレーンテキストへ変換する。
+   * ブロック要素（div/p/liなど）の境界と <br> を改行として扱う。
+   * OPMLの note 属性生成、および検索機能でのプレーンテキスト抽出に使用。
+   */
+  function htmlToPlainText(html) {
+    if (!html) return '';
+    var doc = new DOMParser().parseFromString(
+      '<div id="__root">' + html + '</div>', 'text/html'
+    );
+    var root = doc.getElementById('__root');
+    if (!root) return '';
+
+    var lines = [];
+    var buf = '';
+
+    function flush() {
+      lines.push(buf);
+      buf = '';
+    }
+
+    function walk(node) {
+      var children = node.childNodes;
+      for (var i = 0; i < children.length; i++) {
+        var child = children[i];
+        if (child.nodeType === 3) {
+          buf += child.nodeValue;
+        } else if (child.nodeType === 1) {
+          var tag = child.tagName;
+          if (tag === 'BR') {
+            flush();
+          } else if (_BLOCK_TAGS[tag]) {
+            if (buf !== '') flush();
+            walk(child);
+            if (buf !== '') flush();
+          } else {
+            walk(child);
+          }
+        }
+      }
+    }
+
+    walk(root);
+    if (buf !== '') flush();
+
+    return lines.join('\n');
+  }
+
+  /**
+   * プレーンテキスト（改行区切り）をcontenteditable用HTMLへ変換する（htmlToPlainTextの逆変換）。
+   * 各行を <div> で包む。空行は <div><br></div>（contenteditableの慣習的な空行表現）。
+   * テキストが空文字なら空文字列を返す（<content>なしノードと区別しない設計）。
+   */
+  function noteTextToHtml(text) {
+    if (text === '' || text == null) return '';
+    var rawLines = String(text).split('\n');
+    var out = '';
+    for (var i = 0; i < rawLines.length; i++) {
+      var line = rawLines[i];
+      if (line === '') {
+        out += '<div><br></div>';
+      } else {
+        out += '<div>' + escapeHtmlText(line) + '</div>';
+      }
+    }
+    return out;
+  }
+
+  // =====================================================================
+  // OPML（バナナツリー方言）パーサ・ビルダー
+  // =====================================================================
+
+  function xmlEscapeText(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function xmlEscapeAttr(s) {
+    return xmlEscapeText(s).replace(/"/g, '&quot;');
+  }
+
+  /** 属性値用エスケープ＋改行を &#10; に変換（XML属性値内では改行文字は正規化されてしまうため）。 */
+  function xmlEscapeAttrWithNewlines(s) {
+    return xmlEscapeAttr(s).replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, '&#10;');
+  }
+
+  function _outlineElToNode(el) {
+    var text = el.getAttribute('text');
+    if (text == null) text = '';
+    var hasNote = el.hasAttribute('note');
+    var noteRaw = hasNote ? el.getAttribute('note') : '';
+    var node = createNode(text);
+    node.html = hasNote ? noteTextToHtml(noteRaw) : '';
+    node.rtf = null; // OPMLには元RTFが無いため、.nna保存時は html から都度生成する
+    node.dirty = true; // 保存時に必ず htmlToRtf を通す（無劣化パススルー対象外であることを示す）
+
+    var childEls = [];
+    var childNodes = el.childNodes;
+    for (var i = 0; i < childNodes.length; i++) {
+      var c = childNodes[i];
+      if (c.nodeType === 1 && c.tagName && c.tagName.toLowerCase() === 'outline') {
+        childEls.push(c);
+      }
+    }
+    node.children = childEls.map(_outlineElToNode);
+    node.expanded = node.children.length > 0;
+    return node;
+  }
+
+  /**
+   * OPML（バナナツリー方言、および一般的なOPML）をパースする。
+   * 戻り値: { title: string, roots: [Node, ...] }
+   * DOMParser を使用（ブラウザ前提。core.js内での唯一のDOM依存）。
+   */
+  function parseOpml(xmlText) {
+    var parser = new DOMParser();
+    var xmlDoc = parser.parseFromString(xmlText || '', 'application/xml');
+
+    var title = '';
+    var roots = [];
+
+    var parserErrorEls = xmlDoc.getElementsByTagName('parsererror');
+    if (parserErrorEls && parserErrorEls.length > 0) {
+      return { title: title, roots: roots };
+    }
+
+    var titleEls = xmlDoc.getElementsByTagName('title');
+    if (titleEls && titleEls.length > 0) {
+      title = titleEls[0].textContent || '';
+    }
+
+    var bodyEls = xmlDoc.getElementsByTagName('body');
+    if (bodyEls && bodyEls.length > 0) {
+      var bodyEl = bodyEls[0];
+      var topEls = [];
+      var bodyChildren = bodyEl.childNodes;
+      for (var i = 0; i < bodyChildren.length; i++) {
+        var c = bodyChildren[i];
+        if (c.nodeType === 1 && c.tagName && c.tagName.toLowerCase() === 'outline') {
+          topEls.push(c);
+        }
+      }
+      roots = topEls.map(_outlineElToNode);
+    }
+
+    return { title: title, roots: roots };
+  }
+
+  /**
+   * ツリーをOPML（バナナツリー方言）テキストへシリアライズする。
+   * バイト単位の仕様（docs/samples/bananatree-opml-sample.xml で確認済み）:
+   *   - UTF-8, BOMなし, 改行LF, インデントは深さ×2スペース（ルートoutlineは4スペース開始）
+   *   - 最終行 </opml> の後に改行を付けない
+   *   - 本文が空なら note属性ごと省略。子が無ければ自己閉じタグ。
+   */
+  function buildOpml(doc) {
+    var title = (doc && doc.title) || '';
+    var roots = (doc && doc.roots) || [];
+    var out = [];
+
+    out.push('<?xml version="1.0" encoding="UTF-8"?>');
+    out.push('<opml version="2.0">');
+    out.push('  <head>');
+    out.push('    <title>' + xmlEscapeText(title) + '</title>');
+    out.push('  </head>');
+    out.push('  <body>');
+
+    function emit(node, depth) {
+      var indent = new Array(depth + 3).join('  '); // (depth+2)*2 スペース
+      var textAttr = xmlEscapeAttrWithNewlines(node.title == null ? '' : node.title);
+      var noteText = htmlToPlainText(node.html || '');
+      var hasNote = noteText !== '';
+      var noteAttr = hasNote ? (' note="' + xmlEscapeAttrWithNewlines(noteText) + '"') : '';
+      var children = node.children || [];
+
+      if (children.length === 0) {
+        out.push(indent + '<outline text="' + textAttr + '"' + noteAttr + '/>');
+      } else {
+        out.push(indent + '<outline text="' + textAttr + '"' + noteAttr + '>');
+        for (var i = 0; i < children.length; i++) emit(children[i], depth + 1);
+        out.push(indent + '</outline>');
+      }
+    }
+
+    for (var i = 0; i < roots.length; i++) emit(roots[i], 0);
+
+    out.push('  </body>');
+    out.push('</opml>');
+
+    return out.join('\n');
+  }
+
+  // =====================================================================
+  // エクスポート（グローバル関数として直接公開。加えて window.NanaCore にも束ねる）
+  // =====================================================================
+
+  var NanaCore = {
+    createNode: createNode,
+    nextNodeId: nextNodeId,
+    walkTree: walkTree,
+    findNodeByTitleDFS: findNodeByTitleDFS,
+    findFocusedNode: findFocusedNode,
+    parseNna: parseNna,
+    serializeNna: serializeNna,
+    htmlToPlainText: htmlToPlainText,
+    noteTextToHtml: noteTextToHtml,
+    escapeHtmlText: escapeHtmlText,
+    parseOpml: parseOpml,
+    buildOpml: buildOpml
+  };
+
+  global.NanaCore = NanaCore;
+  // 仕様に明記された関数名はグローバルへも直接公開する（app.js / core-test.html から直接呼べるように）。
+  global.createNode = createNode;
+  global.nextNodeId = nextNodeId;
+  global.parseNna = parseNna;
+  global.serializeNna = serializeNna;
+  global.parseOpml = parseOpml;
+  global.buildOpml = buildOpml;
+  global.htmlToPlainText = htmlToPlainText;
+  global.noteTextToHtml = noteTextToHtml;
+  global.findNodeByTitleDFS = findNodeByTitleDFS;
+  global.findFocusedNode = findFocusedNode;
+  global.walkTree = walkTree;
+
+})(typeof window !== 'undefined' ? window : this);
+
+</script>
+  <script>
+/*
+ * rtf.js — NanaTree Web版 RTF<->HTML変換層
+ *
+ * 責務:
+ *   - Windows RichEdit（.nna本文）が生成するRTFテキストを、contenteditable用HTMLへ変換する（rtfToHtml）。
+ *   - contenteditableで編集後のHTMLを、RichEdit互換のRTF文書へ書き戻す（htmlToRtf）。
+ *   - CP932（Shift_JIS）バイト列と文字列の相互変換（decodeCP932 / encodeCP932）。
+ *
+ * classic <script> として読み込む前提（ES modules不使用、外部ライブラリ不使用、完全オフライン）。
+ * 公開API: window.NanaRTF = { decodeCP932, encodeCP932, encodeCP932Char, rtfToHtml, htmlToRtf }
+ *
+ * 依存: TextDecoder('shift_jis')（ブラウザ標準）, DOMParser（htmlToRtfのHTML解析に使用）。
+ * 依存しないもの: core.js, app.js, その他DOM描画API。
+ *
+ * ---------------------------------------------------------------------------
+ * readme.nna (C:\AIWorks\NANA\NanaTree105_Source\exe\readme.nna, CP932) から
+ * PowerShellで実測した実RTFの特徴（詳細は本ファイル末尾の報告コメント、または
+ * 委譲元への報告メッセージを参照）:
+ *   - ヘッダ: {\rtf1\ansi\ansicpg932\deff0{\fonttbl{\f0\fnil\fcharset128 <CP932名>;}...}
+ *             {\colortbl ;\redN\greenN\blueN;...}\viewkind4\uc1\pard...
+ *             （\deflang1041 はヘッダに現れず、\lang1041 が段落内に現れる）
+ *   - 日本語本文はほぼ全て \'xx の2バイト連続（CP932）。ASCIIと混在する。
+ *   - 箇条書きは {\pntext\f1\'B7\tab}{\*\pn...} + \fi-280\li560 という定型。
+ *   - 表は \trowd\trgaph...\cellxN...\pard\intbl <text>\cell ... \cell\row の繰り返し。
+ *   - 画像は {\pict\wmetafile8...<hex>}、OLEオブジェクトは
+ *     {\object\objemb{\*\objclass ...}...{\*\objdata <hex>}{\result{\pict...<hex>}}}。
+ *   - 本文中に <nlink>...</nlink> というリテラルタグが素の文字列として出現する
+ *     （ノードへのリンク機能。エスケープ不要、そのままHTMLエスケープして素通しする）。
+ */
+
+(function (global) {
+  'use strict';
+
+  // =====================================================================
+  // 1. CP932 (Shift_JIS) コーデック
+  // =====================================================================
+
+  var _cp932EncodeMap = null; // Map<char, Uint8Array> — 初回呼び出し時に生成してキャッシュ
+
+  function buildCP932EncodeMap() {
+    var map = new Map();
+    var decoder;
+    try {
+      decoder = new TextDecoder('shift_jis', { fatal: true });
+    } catch (e) {
+      // 環境がshift_jisラベルに対応していない場合の防御（通常発生しない）。
+      return map;
+    }
+
+    var b, s;
+
+    // 1バイト: ASCII 0x00-0x7F
+    for (b = 0x00; b <= 0x7f; b++) {
+      try {
+        s = decoder.decode(new Uint8Array([b]));
+        if (s.length === 1 && !map.has(s)) map.set(s, new Uint8Array([b]));
+      } catch (e) { /* invalid: skip */ }
+    }
+    // 1バイト: 半角カナ 0xA1-0xDF
+    for (b = 0xa1; b <= 0xdf; b++) {
+      try {
+        s = decoder.decode(new Uint8Array([b]));
+        if (s.length === 1 && !map.has(s)) map.set(s, new Uint8Array([b]));
+      } catch (e) { /* invalid: skip */ }
+    }
+
+    // 2バイト: 先行バイト 0x81-0x9F / 0xE0-0xFC × 後続バイト 0x40-0x7E / 0x80-0xFC
+    var leads = [];
+    for (b = 0x81; b <= 0x9f; b++) leads.push(b);
+    for (b = 0xe0; b <= 0xfc; b++) leads.push(b);
+    var trails = [];
+    for (b = 0x40; b <= 0x7e; b++) trails.push(b);
+    for (b = 0x80; b <= 0xfc; b++) trails.push(b);
+
+    var li, ti, lead, trail, pair;
+    for (li = 0; li < leads.length; li++) {
+      lead = leads[li];
+      for (ti = 0; ti < trails.length; ti++) {
+        trail = trails[ti];
+        try {
+          pair = decoder.decode(new Uint8Array([lead, trail]));
+          if (pair.length === 1 && !map.has(pair)) {
+            map.set(pair, new Uint8Array([lead, trail]));
+          }
+        } catch (e) { /* 未定義の組み合わせ: skip */ }
+      }
+    }
+    return map;
+  }
+
+  function getCP932EncodeMap() {
+    if (!_cp932EncodeMap) _cp932EncodeMap = buildCP932EncodeMap();
+    return _cp932EncodeMap;
+  }
+
+  /** 1文字をCP932バイト列に変換する。マップに無ければnull（呼び出し側で\uNフォールバック判定に使う）。 */
+  function encodeCP932Char(ch) {
+    var map = getCP932EncodeMap();
+    return map.has(ch) ? map.get(ch) : null;
+  }
+
+  /** CP932バイト列(Uint8Array) -> 文字列 */
+  function decodeCP932(uint8arr) {
+    try {
+      return new TextDecoder('shift_jis').decode(uint8arr);
+    } catch (e) {
+      // 防御的フォールバック（通常発生しない）: バイト値をそのままcode pointとして扱う。
+      var out = '';
+      for (var i = 0; i < uint8arr.length; i++) out += String.fromCharCode(uint8arr[i]);
+      return out;
+    }
+  }
+
+  function decodeCP932Bytes(byteArray) {
+    return decodeCP932(new Uint8Array(byteArray));
+  }
+
+  /**
+   * 文字列 -> CP932バイト列(Uint8Array)。マップに無い文字は '?' (0x3F) に置換する。
+   * 数百MB級の入力でも動くよう2パス方式（1回目でバイト数を確定し、確定サイズの
+   * Uint8Arrayへ直接書き込む）。プレーン配列へのpushはメモリ爆発するため使わない。
+   * ASCII（RTFの16進データ部の大半）は表引きせず直接書き込む。
+   */
+  function encodeCP932(str) {
+    var s = String(str);
+    var len = s.length;
+    var total = 0, i, code, ch, b, k;
+    for (i = 0; i < len; i++) {
+      code = s.charCodeAt(i);
+      if (code < 0x80) { total += 1; continue; } // ASCII高速パス
+      if (code >= 0xd800 && code <= 0xdbff && i + 1 < len) {
+        ch = s.substr(i, 2); i++; // サロゲートペア
+      } else {
+        ch = s.charAt(i);
+      }
+      b = encodeCP932Char(ch);
+      total += b ? b.length : 1;
+    }
+    var outArr = new Uint8Array(total);
+    var pos = 0;
+    for (i = 0; i < len; i++) {
+      code = s.charCodeAt(i);
+      if (code < 0x80) { outArr[pos++] = code; continue; }
+      if (code >= 0xd800 && code <= 0xdbff && i + 1 < len) {
+        ch = s.substr(i, 2); i++;
+      } else {
+        ch = s.charAt(i);
+      }
+      b = encodeCP932Char(ch);
+      if (b) {
+        for (k = 0; k < b.length; k++) outArr[pos++] = b[k];
+      } else {
+        outArr[pos++] = 0x3f;
+      }
+    }
+    return outArr;
+  }
+
+  // =====================================================================
+  // 2. 共通ヘルパー
+  // =====================================================================
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function hex2(b) {
+    var h = b.toString(16);
+    return h.length < 2 ? '0' + h : h;
+  }
+
+  function rgbToHex(c) {
+    return '#' + hex2(c.r) + hex2(c.g) + hex2(c.b);
+  }
+
+  // 標準RTFハイライトカラー16色（\highlightN のデコード専用。生成側は\cbNを使う）。
+  var HIGHLIGHT_PALETTE = {
+    1: '#000000', 2: '#0000ff', 3: '#00ffff', 4: '#00ff00',
+    5: '#ff00ff', 6: '#ff0000', 7: '#ffff00', 8: '#ffffff',
+    9: '#000080', 10: '#008080', 11: '#008000', 12: '#800080',
+    13: '#800000', 14: '#808000', 15: '#808080', 16: '#c0c0c0'
+  };
+
+  // readme.nna から実測したデフォルト日本語フォント名
+  // ({\f0\fnil\fcharset128 \'82\'6c\'82\'72 \'82\'6f\'83\'53\'83\'56\'83\'62\'83\'4e;} を
+  //  CP932でデコードした実際の文字列。"ＭＳ Ｐゴシック"＝MS Pゴシック）。
+  var DEFAULT_FONT_NAME = 'ＭＳ Ｐゴシック'; // "ＭＳ Ｐゴシック"
+
+  // =====================================================================
+  // 3. rtfToHtml: トークナイザ
+  // =====================================================================
+
+  /**
+   * posの位置から1トークンを読む。
+   * type: 'open' | 'close' | 'hex' | 'ctrlsym' | 'ctrlword' | 'text'
+   */
+  function nextToken(s, pos) {
+    var n = s.length;
+    if (pos >= n) return { type: 'text', text: '', end: pos };
+    var c = s.charAt(pos);
+    if (c === '{') return { type: 'open', end: pos + 1 };
+    if (c === '}') return { type: 'close', end: pos + 1 };
+    if (c === '\\') {
+      var c2 = pos + 1 < n ? s.charAt(pos + 1) : '';
+      if (c2 === '') return { type: 'text', text: '\\', end: pos + 1 };
+      if (c2 === "'") {
+        var hex = s.substr(pos + 2, 2);
+        var byte = parseInt(hex, 16);
+        if (isNaN(byte)) byte = 0;
+        return { type: 'hex', byte: byte, end: pos + 4 };
+      }
+      if (/[a-zA-Z]/.test(c2)) {
+        var i = pos + 1;
+        var name = '';
+        while (i < n && /[a-zA-Z]/.test(s.charAt(i))) { name += s.charAt(i); i++; }
+        var paramStr = '';
+        if (s.charAt(i) === '-') { paramStr += '-'; i++; }
+        while (i < n && /[0-9]/.test(s.charAt(i))) { paramStr += s.charAt(i); i++; }
+        var param = paramStr === '' ? null : parseInt(paramStr, 10);
+        var end = i;
+        if (s.charAt(i) === ' ') end = i + 1; // 区切り空白1個は消費する
+        return { type: 'ctrlword', name: name, param: param, end: end };
+      }
+      // 制御記号（\\ \{ \} \~ \- \_ など、英字以外の1文字）
+      return { type: 'ctrlsym', ch: c2, end: pos + 2 };
+    }
+    // プレーンテキスト連: 次の \ または { } まで
+    var j = pos;
+    while (j < n) {
+      var cj = s.charAt(j);
+      if (cj === '\\' || cj === '{' || cj === '}') break;
+      j++;
+    }
+    return { type: 'text', text: s.slice(pos, j), end: j };
+  }
+
+  /**
+   * startIdx（'{' の位置）から対応する '}' の直後の位置を返す。
+   * \\ \{ \} エスケープを考慮した単純な深さカウントで、O(n)・例外を投げない。
+   * \pict / \object の巨大な16進データを高速に読み飛ばすために使う。
+   */
+  function findGroupEnd(s, startIdx) {
+    var n = s.length;
+    var depth = 0;
+    var i = startIdx;
+    while (i < n) {
+      var c = s.charAt(i);
+      if (c === '\\') {
+        i += 2; // エスケープ済み文字 or 制御語の先頭2文字をまとめてスキップ（波括弧安全のみが目的）
+        continue;
+      } else if (c === '{') {
+        depth++; i++;
+      } else if (c === '}') {
+        depth--; i++;
+        if (depth <= 0) return i;
+      } else {
+        i++;
+      }
+    }
+    return n; // 対応する閉じ括弧が無い（壊れたRTF）: 末尾まで読み飛ばす
+  }
+
+  // =====================================================================
+  // 4. rtfToHtml: フォント/カラーテーブル パーサ
+  // =====================================================================
+
+  function parseFontTable(rtf, openPos) {
+    var end = findGroupEnd(rtf, openPos);
+    var fonts = {};
+    var pos = openPos + 1;
+    var depth = 1;
+    var curIdx = null, curCharset = 0, nameParts = [];
+
+    function flushName() {
+      if (curIdx != null) {
+        var combined = nameParts.join('');
+        fonts[curIdx] = { name: combined, charset: curCharset };
+      }
+      curIdx = null; curCharset = 0; nameParts = [];
+    }
+
+    while (pos < end) {
+      var t = nextToken(rtf, pos);
+      if (t.type === 'open') { depth++; pos = t.end; continue; }
+      if (t.type === 'close') {
+        depth--; pos = t.end;
+        if (depth <= 0) break;
+        continue;
+      }
+      if (t.type === 'ctrlword') {
+        if (t.name === 'f') { flushName(); curIdx = t.param; }
+        else if (t.name === 'fcharset') { curCharset = t.param; }
+        // fnil / fswiss / fprq / fbias 等は無視
+        pos = t.end; continue;
+      }
+      if (t.type === 'hex') {
+        var bytes = [t.byte];
+        var p = t.end;
+        while (true) {
+          var t2 = nextToken(rtf, p);
+          if (t2.type === 'hex') { bytes.push(t2.byte); p = t2.end; } else break;
+        }
+        pos = p;
+        nameParts.push(decodeCP932Bytes(bytes));
+        continue;
+      }
+      if (t.type === 'text') {
+        pos = t.end;
+        var txt = t.text;
+        if (txt.indexOf(';') !== -1) {
+          var parts = txt.split(';');
+          for (var k = 0; k < parts.length; k++) {
+            if (parts[k]) nameParts.push(parts[k]);
+            if (k < parts.length - 1) flushName();
+          }
+        } else {
+          nameParts.push(txt);
+        }
+        continue;
+      }
+      pos = t.end; // ctrlsym等は無視
+    }
+    flushName();
+    return { fonts: fonts, end: end };
+  }
+
+  function parseColorTable(rtf, openPos) {
+    var end = findGroupEnd(rtf, openPos);
+    var colors = [];
+    var pos = openPos + 1;
+    var r = 0, g = 0, b = 0, seen = false;
+    while (pos < end) {
+      var t = nextToken(rtf, pos);
+      if (t.type === 'open' || t.type === 'close') { pos = t.end; continue; }
+      if (t.type === 'ctrlword') {
+        if (t.name === 'red') { r = t.param || 0; seen = true; }
+        else if (t.name === 'green') { g = t.param || 0; seen = true; }
+        else if (t.name === 'blue') { b = t.param || 0; seen = true; }
+        pos = t.end; continue;
+      }
+      if (t.type === 'text') {
+        var txt = t.text;
+        for (var ci = 0; ci < txt.length; ci++) {
+          if (txt.charAt(ci) === ';') {
+            colors.push(seen ? { r: r, g: g, b: b } : null);
+            r = 0; g = 0; b = 0; seen = false;
+          }
+        }
+        pos = t.end; continue;
+      }
+      pos = t.end;
+    }
+    return { colors: colors, end: end };
+  }
+
+  // =====================================================================
+  // 5. rtfToHtml: 本体
+  // =====================================================================
+
+  // シンボルフォント(\fcharset2)向けの最低限のグリフ対応表（\'B7 = ・ 箇条書き用ビュレット）。
+  // それ以外のバイトはPhase1の割り切りとしてバイト値をそのままcode pointにフォールバックする。
+  var SYMBOL_FONT_MAP = { 0xb7: '•' };
+
+  function defaultDecodeState() {
+    return {
+      bold: false, italic: false, underline: false, strike: false, vertAlign: null,
+      fontIdx: 0, fontSize: null, colorIdx: null, highlightIdx: null, cbIdx: null,
+      align: 'left', li: 0, fi: 0, ucSkip: 1
+    };
+  }
+
+  function cloneState(s) {
+    return {
+      bold: s.bold, italic: s.italic, underline: s.underline, strike: s.strike, vertAlign: s.vertAlign,
+      fontIdx: s.fontIdx, fontSize: s.fontSize, colorIdx: s.colorIdx, highlightIdx: s.highlightIdx, cbIdx: s.cbIdx,
+      align: s.align, li: s.li, fi: s.fi, ucSkip: s.ucSkip
+    };
+  }
+
+  function snapshotFmt(s) {
+    return {
+      bold: s.bold, italic: s.italic, underline: s.underline, strike: s.strike, vertAlign: s.vertAlign,
+      fontIdx: s.fontIdx, fontSize: s.fontSize, colorIdx: s.colorIdx, highlightIdx: s.highlightIdx, cbIdx: s.cbIdx
+    };
+  }
+
+  function fmtEqual(a, b) {
+    return a.bold === b.bold && a.italic === b.italic && a.underline === b.underline &&
+      a.strike === b.strike && a.vertAlign === b.vertAlign && a.fontIdx === b.fontIdx &&
+      a.fontSize === b.fontSize && a.colorIdx === b.colorIdx && a.highlightIdx === b.highlightIdx &&
+      a.cbIdx === b.cbIdx;
+  }
+
+  function convertRtfToHtml(rtf) {
+    var pos = 0;
+    var n = rtf.length;
+    var stack = [];
+    var state = defaultDecodeState();
+    var fonts = {};
+    var colors = [];
+    var paragraphs = [];
+    var pieces = [];
+    var inTable = false;
+    var currentTable = null;
+    var currentRowCells = [];
+    var awaitingRowOrEnd = false;
+    var skipRemaining = 0;
+
+    function pushText(text, fmt) {
+      if (!text) return;
+      var last = pieces.length ? pieces[pieces.length - 1] : null;
+      if (last && last.type === 'text' && fmtEqual(last.fmt, fmt)) {
+        last.text += text;
+      } else {
+        pieces.push({ type: 'text', text: text, fmt: fmt });
+      }
+    }
+    function pushBr() { pieces.push({ type: 'br' }); }
+    function pushRaw(html) { pieces.push({ type: 'raw', html: html }); }
+
+    function flushHexBytes(bytes) {
+      var font = fonts[state.fontIdx];
+      var text;
+      if (font && font.charset === 2) {
+        var out = '';
+        for (var i = 0; i < bytes.length; i++) {
+          out += SYMBOL_FONT_MAP.hasOwnProperty(bytes[i]) ? SYMBOL_FONT_MAP[bytes[i]] : String.fromCharCode(bytes[i]);
+        }
+        text = out;
+      } else {
+        text = decodeCP932Bytes(bytes);
+      }
+      pushText(text, snapshotFmt(state));
+    }
+
+    function runToHtml(run) {
+      var text = escapeHtml(run.text);
+      if (run.fmt.vertAlign === 'super') text = '<sup>' + text + '</sup>';
+      else if (run.fmt.vertAlign === 'sub') text = '<sub>' + text + '</sub>';
+      if (run.fmt.strike) text = '<s>' + text + '</s>';
+      if (run.fmt.underline) text = '<u>' + text + '</u>';
+      if (run.fmt.italic) text = '<i>' + text + '</i>';
+      if (run.fmt.bold) text = '<b>' + text + '</b>';
+      var styles = [];
+      if (run.fmt.fontSize != null) styles.push('font-size:' + (run.fmt.fontSize / 2) + 'pt');
+      if (run.fmt.colorIdx != null && colors[run.fmt.colorIdx]) styles.push('color:' + rgbToHex(colors[run.fmt.colorIdx]));
+      if (run.fmt.highlightIdx != null && HIGHLIGHT_PALETTE[run.fmt.highlightIdx]) styles.push('background-color:' + HIGHLIGHT_PALETTE[run.fmt.highlightIdx]);
+      if (run.fmt.cbIdx != null && colors[run.fmt.cbIdx]) styles.push('background-color:' + rgbToHex(colors[run.fmt.cbIdx]));
+      if (run.fmt.fontIdx != null && fonts[run.fmt.fontIdx] && fonts[run.fmt.fontIdx].name) {
+        styles.push('font-family:' + JSON.stringify(fonts[run.fmt.fontIdx].name));
+      }
+      // style属性値もエスケープする。フォント名は攻撃者制御の文字列になり得るため、
+      // ここを素通しにすると font-family 経由でstyle属性を閉じてタグ注入(XSS)ができてしまう。
+      if (styles.length) text = '<span style="' + escapeHtml(styles.join(';')) + '">' + text + '</span>';
+      return text;
+    }
+
+    function piecesToHtml(list) {
+      var out = '';
+      for (var i = 0; i < list.length; i++) {
+        var p = list[i];
+        if (p.type === 'br') out += '<br>';
+        else if (p.type === 'raw') out += p.html;
+        else out += runToHtml(p);
+      }
+      return out;
+    }
+
+    function flushParagraph() {
+      var styles = [];
+      if (state.align === 'center') styles.push('text-align:center');
+      else if (state.align === 'right') styles.push('text-align:right');
+      else if (state.align === 'justify') styles.push('text-align:justify');
+      if (state.li) styles.push('margin-left:' + Math.round(state.li / 15) + 'px');
+      if (state.fi) styles.push('text-indent:' + Math.round(state.fi / 15) + 'px');
+      var styleAttr = styles.length ? ' style="' + styles.join(';') + '"' : '';
+      var inner = piecesToHtml(pieces);
+      paragraphs.push(inner ? '<div' + styleAttr + '>' + inner + '</div>' : '<div' + styleAttr + '><br></div>');
+      pieces = [];
+    }
+
+    function finalizeTable() {
+      if (!currentTable || currentTable.rows.length === 0) { currentTable = null; return; }
+      var html = '<table border="1">';
+      for (var r = 0; r < currentTable.rows.length; r++) {
+        html += '<tr>';
+        var row = currentTable.rows[r];
+        for (var c = 0; c < row.length; c++) html += '<td>' + row[c] + '</td>';
+        html += '</tr>';
+      }
+      html += '</table>';
+      paragraphs.push(html);
+      currentTable = null;
+    }
+
+    while (pos < n) {
+      // \u フォールバック文字のスキップ処理（\ucN で指定された個数のトークン/文字を無視する）
+      if (skipRemaining > 0) {
+        var stok = nextToken(rtf, pos);
+        if (stok.type === 'text' && stok.text.length > 0) {
+          var consume = Math.min(skipRemaining, stok.text.length);
+          skipRemaining -= consume;
+          pos += consume;
+          continue;
+        } else {
+          skipRemaining -= 1;
+          pos = stok.end;
+          continue;
+        }
+      }
+
+      var tok = nextToken(rtf, pos);
+
+      // 表の行終端直後: 次が \trowd でなければ表を確定して閉じる
+      if (awaitingRowOrEnd) {
+        var isTrowd = (tok.type === 'ctrlword' && tok.name === 'trowd');
+        if (!isTrowd) { finalizeTable(); inTable = false; }
+        awaitingRowOrEnd = false;
+      }
+
+      if (tok.type === 'open') {
+        var peek = nextToken(rtf, pos + 1);
+        if (peek.type === 'ctrlword' && peek.name === 'fonttbl') {
+          var fr = parseFontTable(rtf, pos);
+          for (var fk in fr.fonts) if (fr.fonts.hasOwnProperty(fk)) fonts[fk] = fr.fonts[fk];
+          pos = fr.end; continue;
+        }
+        if (peek.type === 'ctrlword' && peek.name === 'colortbl') {
+          var cr = parseColorTable(rtf, pos);
+          colors = cr.colors;
+          pos = cr.end; continue;
+        }
+        if (peek.type === 'ctrlword' && (peek.name === 'stylesheet' || peek.name === 'info' || peek.name === 'generator')) {
+          pos = findGroupEnd(rtf, pos); continue;
+        }
+        if (peek.type === 'ctrlword' && peek.name === 'pict') {
+          pos = findGroupEnd(rtf, pos);
+          pushRaw('<span class="nna-pict" data-skipped="1">[画像]</span>'); // [画像]
+          continue;
+        }
+        if (peek.type === 'ctrlword' && peek.name === 'object') {
+          pos = findGroupEnd(rtf, pos);
+          pushRaw('<span class="nna-object" data-skipped="1">[オブジェクト]</span>'); // [オブジェクト]
+          continue;
+        }
+        if (peek.type === 'ctrlsym' && peek.ch === '*') {
+          pos = findGroupEnd(rtf, pos); continue; // 未知の {\*\...} 宛先は読み飛ばし
+        }
+        // 通常のグループ: 書式状態をpush
+        stack.push(cloneState(state));
+        pos = pos + 1;
+        continue;
+      }
+
+      if (tok.type === 'close') {
+        if (stack.length > 0) state = stack.pop();
+        pos = pos + 1;
+        continue;
+      }
+
+      if (tok.type === 'hex') {
+        var bytes = [tok.byte];
+        var hp = tok.end;
+        while (true) {
+          var ht = nextToken(rtf, hp);
+          if (ht.type === 'hex') { bytes.push(ht.byte); hp = ht.end; } else break;
+        }
+        pos = hp;
+        flushHexBytes(bytes);
+        continue;
+      }
+
+      if (tok.type === 'ctrlsym') {
+        pos = tok.end;
+        switch (tok.ch) {
+          case '\\': pushText('\\', snapshotFmt(state)); break;
+          case '{': pushText('{', snapshotFmt(state)); break;
+          case '}': pushText('}', snapshotFmt(state)); break;
+          case '~': pushText(' ', snapshotFmt(state)); break;
+          case '-': /* optional hyphen: 表示上は無視 */ break;
+          case '_': pushText('‑', snapshotFmt(state)); break; // 改行不可ハイフン相当
+          default: break;
+        }
+        continue;
+      }
+
+      if (tok.type === 'ctrlword') {
+        pos = tok.end;
+        var name = tok.name, param = tok.param;
+        switch (name) {
+          case 'par':
+            flushParagraph();
+            break;
+          case 'line':
+            pushBr();
+            break;
+          case 'tab':
+            pushText('\t', snapshotFmt(state));
+            break;
+          case 'pard':
+            state.align = 'left'; state.li = 0; state.fi = 0;
+            break;
+          case 'qc': state.align = 'center'; break;
+          case 'qr': state.align = 'right'; break;
+          case 'ql': state.align = 'left'; break;
+          case 'qj': state.align = 'justify'; break;
+          case 'li': state.li = param || 0; break;
+          case 'fi': state.fi = param || 0; break;
+          case 'b': state.bold = (param === 0) ? false : true; break;
+          case 'i': state.italic = (param === 0) ? false : true; break;
+          case 'ul': state.underline = (param === 0) ? false : true; break;
+          case 'ulnone': state.underline = false; break;
+          case 'strike': state.strike = (param === 0) ? false : true; break;
+          case 'super': state.vertAlign = 'super'; break;
+          case 'sub': state.vertAlign = 'sub'; break;
+          case 'nosupersub': state.vertAlign = null; break;
+          case 'f': state.fontIdx = param; break;
+          case 'fs': state.fontSize = param; break;
+          case 'cf': state.colorIdx = param; break;
+          case 'highlight': state.highlightIdx = param; break;
+          case 'cb': state.cbIdx = param; break;
+          case 'uc': state.ucSkip = (param == null) ? 1 : param; break;
+          case 'u': {
+            var val = param;
+            if (val == null) val = 0;
+            if (val < 0) val += 65536;
+            pushText(String.fromCharCode(val), snapshotFmt(state));
+            skipRemaining = state.ucSkip;
+            break;
+          }
+          case 'trowd':
+            inTable = true;
+            if (!currentTable) currentTable = { rows: [] };
+            currentRowCells = [];
+            pieces = [];
+            break;
+          case 'cellx':
+            // 列幅は無視する
+            break;
+          case 'intbl':
+            if (!inTable) { inTable = true; if (!currentTable) currentTable = { rows: [] }; }
+            break;
+          case 'cell':
+            currentRowCells.push(piecesToHtml(pieces));
+            pieces = [];
+            break;
+          case 'row':
+            currentTable.rows.push(currentRowCells);
+            currentRowCells = [];
+            awaitingRowOrEnd = true;
+            break;
+          default:
+            // 未知/非対応の制御語は無視（防御的）
+            break;
+        }
+        continue;
+      }
+
+      // plain text
+      pos = tok.end;
+      if (tok.text) {
+        var cleaned = tok.text.replace(/[\r\n]/g, '');
+        if (cleaned) pushText(cleaned, snapshotFmt(state));
+      }
+    }
+
+    if (inTable) finalizeTable();
+    if (pieces.length) flushParagraph();
+
+    return paragraphs.join('');
+  }
+
+  function rtfToHtml(rtf) {
+    if (rtf == null) return '';
+    try {
+      return convertRtfToHtml(String(rtf));
+    } catch (e) {
+      // 最終防衛ライン: 例外を投げず、可能な限りテキストとして復元する
+      try {
+        var raw = String(rtf).replace(/\\par\b\s?/g, '\n').replace(/\\'[0-9a-fA-F]{2}/g, ' ');
+        var lines = raw.split('\n');
+        var out = '';
+        for (var i = 0; i < lines.length; i++) out += '<div>' + escapeHtml(lines[i]) + '</div>';
+        return out || '<div><br></div>';
+      } catch (e2) {
+        return '<div><br></div>';
+      }
+    }
+  }
+
+  // =====================================================================
+  // 6. htmlToRtf: 補助（色/フォントサイズのパース）
+  // =====================================================================
+
+  var NAMED_COLORS = {
+    black: [0, 0, 0], white: [255, 255, 255], red: [255, 0, 0], green: [0, 128, 0],
+    blue: [0, 0, 255], yellow: [255, 255, 0], gray: [128, 128, 128], grey: [128, 128, 128],
+    orange: [255, 165, 0], purple: [128, 0, 128], silver: [192, 192, 192], navy: [0, 0, 128],
+    teal: [0, 128, 128], lime: [0, 255, 0], maroon: [128, 0, 0], olive: [128, 128, 0],
+    aqua: [0, 255, 255], fuchsia: [255, 0, 255]
+  };
+
+  function parseColor(str) {
+    if (!str) return null;
+    var s = String(str).trim().toLowerCase();
+    if (s === '' || s === 'transparent') return null;
+    var m = s.match(/^#([0-9a-f]{6})$/);
+    if (m) {
+      var num = parseInt(m[1], 16);
+      return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+    }
+    m = s.match(/^#([0-9a-f]{3})$/);
+    if (m) {
+      var h = m[1];
+      return { r: parseInt(h.charAt(0) + h.charAt(0), 16), g: parseInt(h.charAt(1) + h.charAt(1), 16), b: parseInt(h.charAt(2) + h.charAt(2), 16) };
+    }
+    m = s.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+    if (m) return { r: +m[1], g: +m[2], b: +m[3] };
+    if (NAMED_COLORS.hasOwnProperty(s)) {
+      var c = NAMED_COLORS[s];
+      return { r: c[0], g: c[1], b: c[2] };
+    }
+    return null;
+  }
+
+  function parseFontSizePt(str) {
+    if (!str) return null;
+    var s = String(str).trim().toLowerCase();
+    var m = s.match(/^([\d.]+)pt$/); if (m) return parseFloat(m[1]);
+    m = s.match(/^([\d.]+)px$/); if (m) return parseFloat(m[1]) * 0.75;
+    m = s.match(/^([\d.]+)em$/); if (m) return parseFloat(m[1]) * 12;
+    m = s.match(/^([\d.]+)$/); if (m) return parseFloat(m[1]);
+    return null;
+  }
+
+  var LEGACY_FONT_SIZE_PT = { 1: 8, 2: 10, 3: 12, 4: 14, 5: 18, 6: 24, 7: 36 };
+
+  function guessCharsetForFont(name) {
+    for (var i = 0; i < name.length; i++) {
+      if (name.charCodeAt(i) > 0x7e) return 128; // 日本語フォント想定
+    }
+    return 0; // ANSI
+  }
+
+  /** RTFテキスト用エスケープ（\\ \{ \} と、CP932化できる非ASCII文字の \'xx 化、
+   *  できない文字の \uN? フォールバック）。制御語自体はここでは生成しない。 */
+  function encodeTextToRtf(str) {
+    var s = String(str);
+    var out = '';
+    for (var i = 0; i < s.length; i++) {
+      var ch = s.charAt(i);
+      var code = s.charCodeAt(i);
+      if (ch === '\\') { out += '\\\\'; continue; }
+      if (ch === '{') { out += '\\{'; continue; }
+      if (ch === '}') { out += '\\}'; continue; }
+      if (ch === '\n') { out += '\\line '; continue; }
+      if (ch === '\t') { out += '\\tab '; continue; }
+      if (ch === '\r') { continue; }
+      if (code >= 0x20 && code <= 0x7e) { out += ch; continue; }
+      if (code < 0x20) { continue; } // 制御文字は無視
+      var b = encodeCP932Char(ch);
+      if (b) {
+        for (var k = 0; k < b.length; k++) out += "\\'" + hex2(b[k]);
+      } else {
+        var signed = code > 32767 ? code - 65536 : code;
+        out += '\\u' + signed + ' ?';
+      }
+    }
+    return out;
+  }
+
+  // =====================================================================
+  // 7. htmlToRtf: 本体
+  // =====================================================================
+
+  function plainBaseFmt() {
+    return { bold: false, italic: false, underline: false, strike: false, vertAlign: null, fontIdx: 0, fontSize: 20, colorIdx: null, bgIdx: null };
+  }
+
+  function convertHtmlToRtf(html) {
+    var parser = new DOMParser();
+    var doc = parser.parseFromString(String(html == null ? '' : html), 'text/html');
+    var body = doc.body || doc.documentElement;
+
+    var fontMap = new Map(); fontMap.set(DEFAULT_FONT_NAME, 0);
+    var fontsByIdx = { 0: DEFAULT_FONT_NAME };
+    var nextFontIdx = 1;
+    var colorMap = new Map();
+    var colorsByIdx = {};
+    var nextColorIdx = 1;
+
+    function getFontIdx(name) {
+      if (!name) return 0;
+      if (fontMap.has(name)) return fontMap.get(name);
+      var idx = nextFontIdx++;
+      fontMap.set(name, idx);
+      fontsByIdx[idx] = name;
+      return idx;
+    }
+    function getColorIdx(rgb) {
+      if (!rgb) return null;
+      var key = rgb.r + ',' + rgb.g + ',' + rgb.b;
+      if (colorMap.has(key)) return colorMap.get(key);
+      var idx = nextColorIdx++;
+      colorMap.set(key, idx);
+      colorsByIdx[idx] = rgb;
+      return idx;
+    }
+
+    var out = [];
+    var emitted = { bold: false, italic: false, underline: false, strike: false, vertAlign: null, fontIdx: -1, fontSize: -1, colorIdx: -1, bgIdx: -1 };
+
+    function setFormat(target) {
+      if (target.bold !== emitted.bold) { out.push(target.bold ? '\\b ' : '\\b0 '); emitted.bold = target.bold; }
+      if (target.italic !== emitted.italic) { out.push(target.italic ? '\\i ' : '\\i0 '); emitted.italic = target.italic; }
+      if (target.underline !== emitted.underline) { out.push(target.underline ? '\\ul ' : '\\ulnone '); emitted.underline = target.underline; }
+      if (target.strike !== emitted.strike) { out.push(target.strike ? '\\strike ' : '\\strike0 '); emitted.strike = target.strike; }
+      if (target.vertAlign !== emitted.vertAlign) {
+        if (target.vertAlign === 'super') out.push('\\super ');
+        else if (target.vertAlign === 'sub') out.push('\\sub ');
+        else out.push('\\nosupersub ');
+        emitted.vertAlign = target.vertAlign;
+      }
+      if (target.fontIdx !== emitted.fontIdx) { out.push('\\f' + target.fontIdx + ' '); emitted.fontIdx = target.fontIdx; }
+      if (target.fontSize !== emitted.fontSize) { out.push('\\fs' + target.fontSize + ' '); emitted.fontSize = target.fontSize; }
+      if (target.colorIdx !== emitted.colorIdx) { out.push('\\cf' + (target.colorIdx || 0) + ' '); emitted.colorIdx = target.colorIdx; }
+      if (target.bgIdx !== emitted.bgIdx) { out.push(target.bgIdx ? '\\cb' + target.bgIdx + ' ' : '\\cb0 '); emitted.bgIdx = target.bgIdx; }
+    }
+    function emitText(text) { if (text) out.push(encodeTextToRtf(text)); }
+
+    function deriveFmt(el, parentFmt) {
+      var fmt = {
+        bold: parentFmt.bold, italic: parentFmt.italic, underline: parentFmt.underline, strike: parentFmt.strike,
+        vertAlign: parentFmt.vertAlign, fontIdx: parentFmt.fontIdx, fontSize: parentFmt.fontSize,
+        colorIdx: parentFmt.colorIdx, bgIdx: parentFmt.bgIdx
+      };
+      var tag = el.tagName ? el.tagName.toLowerCase() : '';
+      if (tag === 'b' || tag === 'strong') fmt.bold = true;
+      if (tag === 'i' || tag === 'em') fmt.italic = true;
+      if (tag === 'u') fmt.underline = true;
+      if (tag === 's' || tag === 'strike' || tag === 'del') fmt.strike = true;
+      if (tag === 'sub') fmt.vertAlign = 'sub';
+      if (tag === 'sup') fmt.vertAlign = 'super';
+      if (tag === 'font') {
+        var colorAttr = el.getAttribute && el.getAttribute('color');
+        if (colorAttr) { var cc = parseColor(colorAttr); if (cc) fmt.colorIdx = getColorIdx(cc); }
+        var faceAttr = el.getAttribute && el.getAttribute('face');
+        if (faceAttr) fmt.fontIdx = getFontIdx(faceAttr.split(',')[0].replace(/["']/g, '').trim());
+        var sizeAttr = el.getAttribute && el.getAttribute('size');
+        if (sizeAttr && LEGACY_FONT_SIZE_PT[sizeAttr]) fmt.fontSize = LEGACY_FONT_SIZE_PT[sizeAttr] * 2;
+      }
+      var style = el.style;
+      if (style) {
+        var fw = style.fontWeight;
+        if (fw) { if (fw === 'bold' || fw === 'bolder' || parseInt(fw, 10) >= 600) fmt.bold = true; else if (fw === 'normal') fmt.bold = false; }
+        var fs = style.fontStyle;
+        if (fs === 'italic' || fs === 'oblique') fmt.italic = true; else if (fs === 'normal') fmt.italic = false;
+        var td = style.textDecoration || style.textDecorationLine || '';
+        if (td) {
+          if (td.indexOf('underline') !== -1) fmt.underline = true;
+          if (td.indexOf('line-through') !== -1) fmt.strike = true;
+          if (td === 'none') { fmt.underline = false; fmt.strike = false; }
+        }
+        var va = style.verticalAlign;
+        if (va === 'sub') fmt.vertAlign = 'sub'; else if (va === 'super') fmt.vertAlign = 'super';
+        var color = style.color;
+        if (color) { var pc = parseColor(color); if (pc) fmt.colorIdx = getColorIdx(pc); }
+        var bg = style.backgroundColor || style.background;
+        if (bg) { var pb = parseColor(bg); if (pb) fmt.bgIdx = getColorIdx(pb); }
+        var fsize = style.fontSize;
+        if (fsize) { var pt = parseFontSizePt(fsize); if (pt) fmt.fontSize = Math.round(pt * 2); }
+        var ff = style.fontFamily;
+        if (ff) {
+          var fname = ff.split(',')[0].replace(/["']/g, '').trim();
+          if (fname) fmt.fontIdx = getFontIdx(fname);
+        }
+      }
+      return fmt;
+    }
+
+    function walkInline(node, fmt) {
+      var children = node.childNodes;
+      for (var i = 0; i < children.length; i++) {
+        var child = children[i];
+        if (child.nodeType === 3) {
+          var text = child.nodeValue;
+          if (text) { setFormat(fmt); emitText(text); }
+        } else if (child.nodeType === 1) {
+          var tag = child.tagName.toLowerCase();
+          if (tag === 'br') { out.push('\\line '); continue; }
+          if (tag === 'script' || tag === 'style') continue;
+          var childFmt = deriveFmt(child, fmt);
+          walkInline(child, childFmt);
+        }
+      }
+    }
+
+    function paragraphPrefixTokens(el) {
+      var tokens = '\\pard ';
+      var style = el.style;
+      if (style) {
+        var ta = style.textAlign;
+        if (ta === 'center') tokens += '\\qc ';
+        else if (ta === 'right') tokens += '\\qr ';
+        else if (ta === 'justify') tokens += '\\qj ';
+        var ml = style.marginLeft;
+        if (ml) { var mlpx = parseFloat(ml); if (!isNaN(mlpx) && mlpx !== 0) tokens += '\\li' + Math.round(mlpx * 15) + ' '; }
+        var ti = style.textIndent;
+        if (ti) { var tipx = parseFloat(ti); if (!isNaN(tipx) && tipx !== 0) tokens += '\\fi' + Math.round(tipx * 15) + ' '; }
+      }
+      return tokens;
+    }
+
+    function processList(el, tag) {
+      var n = 1;
+      var items = el.children;
+      for (var i = 0; i < items.length; i++) {
+        var li = items[i];
+        if (!li.tagName || li.tagName.toLowerCase() !== 'li') continue;
+        out.push('\\pard ');
+        setFormat(plainBaseFmt());
+        emitText(tag === 'ul' ? '・ ' : (n++) + '. '); // ・
+        walkInline(li, plainBaseFmt());
+        out.push('\\par ');
+      }
+    }
+
+    function processTable(el) {
+      var rows = el.querySelectorAll('tr');
+      for (var r = 0; r < rows.length; r++) {
+        var tr = rows[r];
+        var cells = tr.children;
+        var tokens = '\\trowd\\trgaph108 ';
+        var x = 0;
+        var colWidth = cells.length > 0 ? Math.floor(8000 / cells.length) : 2000;
+        for (var ci = 0; ci < cells.length; ci++) { x += colWidth; tokens += '\\cellx' + x + ' '; }
+        tokens += '\\pard\\intbl ';
+        out.push(tokens);
+        for (var cj = 0; cj < cells.length; cj++) {
+          setFormat(plainBaseFmt());
+          walkInline(cells[cj], plainBaseFmt());
+          out.push('\\cell ');
+        }
+        out.push('\\row ');
+      }
+      out.push('\\pard\\par ');
+    }
+
+    function processBlock(el) {
+      var tag = el.tagName.toLowerCase();
+      if (tag === 'div' || tag === 'p') {
+        out.push(paragraphPrefixTokens(el));
+        walkInline(el, plainBaseFmt());
+        out.push('\\par ');
+      } else if (tag === 'ul' || tag === 'ol') {
+        processList(el, tag);
+      } else if (tag === 'table') {
+        processTable(el);
+      } else {
+        out.push('\\pard ');
+        walkInline(el, plainBaseFmt());
+        out.push('\\par ');
+      }
+    }
+
+    var BLOCK_TAGS = { div: 1, p: 1, ul: 1, ol: 1, table: 1 };
+    var looseNodes = [];
+    function flushLoose() {
+      if (!looseNodes.length) return;
+      out.push('\\pard ');
+      var frag = doc.createElement('div');
+      for (var i = 0; i < looseNodes.length; i++) frag.appendChild(looseNodes[i].cloneNode(true));
+      walkInline(frag, plainBaseFmt());
+      out.push('\\par ');
+      looseNodes = [];
+    }
+
+    var topNodes = body.childNodes;
+    for (var i = 0; i < topNodes.length; i++) {
+      var child = topNodes[i];
+      if (child.nodeType === 3) {
+        if (child.nodeValue && child.nodeValue.replace(/\s/g, '') !== '') looseNodes.push(child);
+        continue;
+      }
+      if (child.nodeType !== 1) continue;
+      var tag = child.tagName.toLowerCase();
+      if (BLOCK_TAGS.hasOwnProperty(tag)) { flushLoose(); processBlock(child); }
+      else { looseNodes.push(child); }
+    }
+    flushLoose();
+    if (out.length === 0) out.push('\\pard\\par ');
+
+    // フォントテーブル生成
+    var fonttbl = '{\\fonttbl';
+    var fontIndices = [];
+    for (var fidx in fontsByIdx) if (fontsByIdx.hasOwnProperty(fidx)) fontIndices.push(parseInt(fidx, 10));
+    fontIndices.sort(function (a, b) { return a - b; });
+    for (var fi = 0; fi < fontIndices.length; fi++) {
+      var idx = fontIndices[fi];
+      var fname = fontsByIdx[idx];
+      var charset = idx === 0 ? 128 : guessCharsetForFont(fname);
+      fonttbl += '{\\f' + idx + '\\fnil\\fcharset' + charset + ' ' + encodeTextToRtf(fname) + ';}';
+    }
+    fonttbl += '}';
+
+    // カラーテーブル生成
+    var colortbl = '{\\colortbl ;';
+    var colorIndices = [];
+    for (var cidx in colorsByIdx) if (colorsByIdx.hasOwnProperty(cidx)) colorIndices.push(parseInt(cidx, 10));
+    colorIndices.sort(function (a, b) { return a - b; });
+    for (var cix = 0; cix < colorIndices.length; cix++) {
+      var cc2 = colorsByIdx[colorIndices[cix]];
+      colortbl += '\\red' + cc2.r + '\\green' + cc2.g + '\\blue' + cc2.b + ';';
+    }
+    colortbl += '}';
+
+    var header = '{\\rtf1\\ansi\\ansicpg932\\deff0' + fonttbl + colortbl + '\\viewkind4\\uc1';
+    return header + out.join('') + '}';
+  }
+
+  function htmlToRtf(html) {
+    try {
+      return convertHtmlToRtf(html);
+    } catch (e) {
+      try {
+        var parser = new DOMParser();
+        var doc = parser.parseFromString('<div>' + String(html == null ? '' : html) + '</div>', 'text/html');
+        var text = doc.body ? doc.body.textContent : String(html);
+        return '{\\rtf1\\ansi\\ansicpg932\\deff0{\\fonttbl{\\f0\\fnil\\fcharset128 ' + encodeTextToRtf(DEFAULT_FONT_NAME) + ';}}{\\colortbl ;}\\viewkind4\\uc1\\pard\\f0\\fs20 ' + encodeTextToRtf(String(text)) + '\\par}';
+      } catch (e2) {
+        return '{\\rtf1\\ansi\\ansicpg932\\deff0{\\fonttbl{\\f0\\fnil\\fcharset128 MS Gothic;}}{\\colortbl ;}\\viewkind4\\uc1\\pard\\f0\\fs20\\par}';
+      }
+    }
+  }
+
+  // =====================================================================
+  // 8. 公開API
+  // =====================================================================
+
+  global.NanaRTF = {
+    decodeCP932: decodeCP932,
+    encodeCP932: encodeCP932,
+    encodeCP932Char: encodeCP932Char,
+    rtfToHtml: rtfToHtml,
+    htmlToRtf: htmlToRtf
+  };
+
+})(window);
+
+</script>
+  <script>
+/*
+ * treetext.js — 階層化テキスト形式の入出力（NanaTree互換）
+ *
+ * 形式仕様（NanaTree105 FormTree.pas AddTreeFromTreeTextFile /
+ * FormMain.pas ExportDocTreeTxt から解読）:
+ *   - 行頭が '.' で始まる行はノード見出し。連続するピリオドの数が階層
+ *     （ルート=1個、子=2個…）。ピリオドの後ろがタイトル。
+ *   - それ以外の行は直前ノードの本文（プレーンテキスト、書式なし）。
+ *   - 本文行が '.' で始まる場合はノード見出しと区別できない（元実装と同じ制限）。
+ *
+ * グローバル: window.NanaTreeText = { parseTreeText, buildTreeText }
+ */
+(function () {
+  'use strict';
+
+  // parseTreeText(text) -> [{ title, bodyText, children }]
+  // 相対階層方式: 最初のノード行のピリオド数を基準階層とする（元実装と同じ挙動）。
+  function parseTreeText(text) {
+    var lines = String(text).replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+    // 末尾の空行1つは行分割の産物なので落とす（"a\n" -> ["a"]）
+    if (lines.length && lines[lines.length - 1] === '') lines.pop();
+
+    var roots = [];
+    // スタック: 各階層の「現在のノード」。stack[0] はルート配列の直近ノード。
+    var stack = []; // 要素: { node, tier }
+    var baseTier = null;
+
+    function newNode(title) {
+      return { title: title, bodyLines: [], children: [] };
+    }
+
+    function appendAt(tier, node) {
+      // tier: 1 = ルート階層
+      while (stack.length && stack[stack.length - 1].tier >= tier) stack.pop();
+      if (!stack.length) {
+        roots.push(node);
+      } else {
+        stack[stack.length - 1].node.children.push(node);
+      }
+      stack.push({ node: node, tier: tier });
+    }
+
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      if (line.charAt(0) === '.') {
+        var dots = 0;
+        while (dots < line.length && line.charAt(dots) === '.') dots++;
+        var title = line.slice(dots);
+        if (baseTier === null) baseTier = dots;
+        // 基準からの相対で 1 始まりの階層へ正規化（深すぎるジャンプは1段に丸める:
+        // 元実装は多段ジャンプで空ノードを補うが、実用上は1段扱いのほうが安全）
+        var tier = dots - baseTier + 1;
+        if (tier < 1) tier = 1;
+        var top = stack.length ? stack[stack.length - 1].tier : 0;
+        if (tier > top + 1) tier = top + 1;
+        appendAt(tier, newNode(title));
+      } else {
+        // 本文行。先頭にノード行が無いままの本文は無題ノードに入れる（元実装と同挙動）
+        if (!stack.length) appendAt(1, newNode(''));
+        stack[stack.length - 1].node.bodyLines.push(line);
+      }
+    }
+
+    return roots.map(finalize);
+
+    function finalize(n) {
+      return {
+        title: n.title,
+        bodyText: n.bodyLines.join('\n'),
+        children: n.children.map(finalize)
+      };
+    }
+  }
+
+  // buildTreeText(roots) -> string
+  // roots: [{ title, bodyText, children }]（bodyText はプレーンテキスト。呼び出し側で
+  // RTF/HTML からの変換を済ませておくこと）
+  // 出力は NanaTree の ExportDocTreeTxt と同じ構造:
+  //   ピリオド(階層数) + タイトル / 本文行（空でも1行）/ 子を再帰
+  // 改行は CRLF（NanaTree が読むファイルのため）。
+  function buildTreeText(roots) {
+    var out = [];
+    function walk(nodes, tier) {
+      for (var i = 0; i < nodes.length; i++) {
+        var n = nodes[i];
+        out.push(repeatDot(tier) + (n.title || ''));
+        // NanaTree は本文が空でも空行を1行書く（Copy(Text,1,Len-2) の仕様）
+        var body = (n.bodyText || '').replace(/\r\n/g, '\n');
+        var bodyLines = body.split('\n');
+        for (var j = 0; j < bodyLines.length; j++) out.push(bodyLines[j]);
+        if (n.children && n.children.length) walk(n.children, tier + 1);
+      }
+    }
+    walk(roots, 1);
+    return out.join('\r\n') + '\r\n';
+  }
+
+  function repeatDot(n) {
+    var s = '';
+    while (n-- > 0) s += '.';
+    return s;
+  }
+
+  window.NanaTreeText = {
+    parseTreeText: parseTreeText,
+    buildTreeText: buildTreeText
+  };
+})();
+
+</script>
+  <script>
+/*
+ * nnaimport.js — ブラウザ内で .nna をコンパクト形式に変換する（Python不要）
+ *
+ * 巨大な .nna（埋め込み画像で数百MB）を、画像をPNG化して data URI で埋め込んだ
+ * 軽量なモデルに変換する。tools/import_nna_compact.py と同じ出力を、ブラウザだけで生成する。
+ *   - RTF本文 -> 段落テキスト(+画像プレースホルダ)   … parse_rtf のJS移植
+ *   - \pict の WMF/EMF 埋め込みDIB -> BMPバイト列       … convert_images.py のJS移植
+ *   - BMP -> PNG data URI                              … ブラウザ内蔵BMPデコーダ + Canvas
+ *
+ * グローバル: window.NanaImport.convertNnaToCompact(text, title, onProgress) -> Promise<compactDoc>
+ *   text: decodeCP932 済みの .nna テキスト全体
+ *   compactDoc: { format:'nanatree-web-compact', version:1, title, roots:[{title,html,children}] }
+ *
+ * 依存: window.NanaCore（parseNna / walkTree）, window.NanaRTF（decodeCP932）
+ */
+(function () {
+  'use strict';
+
+  var SKIP_DESTS = { fonttbl: 1, colortbl: 1, stylesheet: 1, info: 1,
+                     generator: 1, header: 1, footer: 1, object: 1 };
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function hexToBytes(h) {
+    if (h.length % 2) h = h.slice(0, -1);
+    var a = new Uint8Array(h.length / 2);
+    for (var j = 0; j < a.length; j++) a[j] = parseInt(h.substr(j * 2, 2), 16);
+    return a;
+  }
+
+  // ===================================================================
+  // 1. RTF本文 -> 段落[]（画像は \x00IMG:idx\x00）+ 生WMFバイト列[]
+  //    （import_nna_compact.py の parse_rtf の忠実な移植）
+  // ===================================================================
+  function rtfBodyToParas(rtf) {
+    var s = rtf, n = s.length;
+    var out = [], textBytes = [], text = [], i = 0;
+    var skipDepth = 0, ucSkip = 1, blobs = [];
+
+    function flushBytes() {
+      if (textBytes.length) {
+        text.push(window.NanaRTF.decodeCP932(new Uint8Array(textBytes)));
+        textBytes = [];
+      }
+    }
+    function endPar() {
+      flushBytes();
+      var p = text.join('').trim();
+      text = [];
+      if (p) out.push(p);
+    }
+    function readPict(start) {
+      var seg = s.slice(start, start + 4000);
+      var m = /[\r\n ]([0-9a-fA-F]{64,})/.exec(seg);
+      var headerEnd = start + (m ? m.index : 0);
+      var k = headerEnd, hex = [];
+      while (k < n) {
+        var c = s.charCodeAt(k);
+        if (c === 0x7d) break; // }
+        if ((c >= 48 && c <= 57) || (c >= 97 && c <= 102) || (c >= 65 && c <= 70)) {
+          var run = k;
+          while (k < n) {
+            var c2 = s.charCodeAt(k);
+            if ((c2 >= 48 && c2 <= 57) || (c2 >= 97 && c2 <= 102) || (c2 >= 65 && c2 <= 70)) k++;
+            else break;
+          }
+          hex.push(s.slice(run, k));
+          continue;
+        }
+        k++;
+      }
+      var idx = blobs.length;
+      blobs.push(hexToBytes(hex.join('')));
+      flushBytes();
+      text.push('\x00IMG:' + idx + '\x00');
+      return k;
+    }
+
+    while (i < n) {
+      var c = s.charCodeAt(i);
+      if (skipDepth) {
+        if (c === 0x7b) skipDepth++;
+        else if (c === 0x7d) skipDepth--;
+        else if (c === 0x5c && i + 1 < n) i++;
+        i++;
+        continue;
+      }
+      if (c === 0x7b) { // {
+        if (s.substr(i, 3) === '{\\*') { skipDepth = 1; i++; continue; }
+        var mm = /^\{\\\*?\\?([a-z]+)/.exec(s.slice(i, i + 24));
+        var word = mm ? mm[1] : '';
+        if (SKIP_DESTS[word]) { skipDepth = 1; i++; continue; }
+        if (word === 'pict') { i = readPict(i + 6); continue; }
+        i++;
+        continue;
+      }
+      if (c === 0x7d) { i++; continue; }
+      if (c === 0x5c) { // \
+        var nx = s.charAt(i + 1);
+        if (nx === "'") {
+          var v = parseInt(s.substr(i + 2, 2), 16);
+          if (!isNaN(v)) textBytes.push(v);
+          i += 4;
+          continue;
+        }
+        if (nx === '\\' || nx === '{' || nx === '}') { flushBytes(); text.push(nx); i += 2; continue; }
+        if (nx === '~') { flushBytes(); text.push(' '); i += 2; continue; }
+        var mw = /^\\([a-z]+)(-?\d+)? ?/.exec(s.slice(i, i + 32));
+        if (mw) {
+          var w = mw[1], param = mw[2];
+          i += mw[0].length;
+          if (w === 'par' || w === 'line') endPar();
+          else if (w === 'tab') { flushBytes(); text.push('\t'); }
+          else if (w === 'uc') ucSkip = parseInt(param || '1', 10);
+          else if (w === 'u') {
+            flushBytes();
+            var cp = parseInt(param, 10);
+            if (cp < 0) cp += 65536;
+            text.push(String.fromCharCode(cp));
+            var sk = 0;
+            while (sk < ucSkip && i < n) {
+              if (s.substr(i, 2) === "\\'") i += 4; else i++;
+              sk++;
+            }
+          }
+          continue;
+        }
+        i += 2;
+        continue;
+      }
+      if (c === 0x0d || c === 0x0a) { i++; continue; }
+      if (c < 128) textBytes.push(c);
+      else { flushBytes(); text.push(s.charAt(i)); }
+      i++;
+    }
+    endPar();
+    return { paras: out, blobs: blobs };
+  }
+
+  // ===================================================================
+  // 2. WMF/EMF 埋め込みDIB -> BMPバイト列（convert_images.py の移植）
+  // ===================================================================
+  function u32(dv, o) { return dv.getUint32(o, true); }
+  function u16(dv, o) { return dv.getUint16(o, true); }
+
+  function extractEmf(b) {
+    var dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+    var off = 18, parts = [], n = b.length;
+    while (off + 6 <= n) {
+      var sizeWords = u32(dv, off), func = u16(dv, off + 4);
+      if (sizeWords < 3) break;
+      // func 0x0626 (META_ESCAPE) + 'WMFC' コメント = 埋め込みEMFチャンク
+      if (func === 0x0626 && off + 14 <= n &&
+          b[off + 10] === 0x57 && b[off + 11] === 0x4D && b[off + 12] === 0x46 && b[off + 13] === 0x43) {
+        var curSize = u32(dv, off + 32);
+        var dataStart = off + 44;
+        parts.push(b.subarray(dataStart, dataStart + curSize));
+      }
+      if (func === 0) break;
+      off += sizeWords * 2;
+    }
+    var total = 0, k;
+    for (k = 0; k < parts.length; k++) total += parts[k].length;
+    var outb = new Uint8Array(total), p = 0;
+    for (k = 0; k < parts.length; k++) { outb.set(parts[k], p); p += parts[k].length; }
+    return outb;
+  }
+
+  function dibsFromEmf(emf) {
+    var dv = new DataView(emf.buffer, emf.byteOffset, emf.byteLength);
+    var out = [], off = 0, n = emf.length;
+    while (off + 8 <= n) {
+      var itype = u32(dv, off), size = u32(dv, off + 4);
+      if (size < 8 || off + size > n) break;
+      if (itype === 81 || itype === 80) { // STRETCHDIBITS / SETDIBITSTODEVICE
+        var offBmi = u32(dv, off + 48), cbBmi = u32(dv, off + 52),
+            offBits = u32(dv, off + 56), cbBits = u32(dv, off + 60);
+        out.push([emf.subarray(off + offBmi, off + offBmi + cbBmi),
+                  emf.subarray(off + offBits, off + offBits + cbBits)]);
+      } else if (itype === 76 || itype === 77) { // BITBLT / STRETCHBLT
+        var base = 84;
+        if (off + base + 16 <= n) {
+          var ob = u32(dv, off + base), cb = u32(dv, off + base + 4),
+              obit = u32(dv, off + base + 8), cbit = u32(dv, off + base + 12);
+          if (cb && cbit && off + obit + cbit <= n) {
+            out.push([emf.subarray(off + ob, off + ob + cb),
+                      emf.subarray(off + obit, off + obit + cbit)]);
+          }
+        }
+      }
+      off += size;
+      if (itype === 14) break;
+    }
+    return out;
+  }
+
+  function splitDib(d) {
+    if (d.length < 40) return null;
+    var dv = new DataView(d.buffer, d.byteOffset, d.byteLength);
+    var hsz = u32(dv, 0);
+    if (hsz < 40 || hsz > 128) return null;
+    var bitcount = u16(dv, 14), comp = u32(dv, 16), clrUsed = u32(dv, 32);
+    var palette = 0;
+    if (bitcount <= 8) palette = (clrUsed || (1 << bitcount)) * 4;
+    else if (comp === 3) palette = 12;
+    var split = hsz + palette;
+    return [d.subarray(0, split), d.subarray(split)];
+  }
+
+  function dibsFromWmf(b) {
+    var dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+    var out = [], off = 18, n = b.length;
+    while (off + 6 <= n) {
+      var sizeWords = u32(dv, off), func = u16(dv, off + 4);
+      if (sizeWords < 3) break;
+      var end = off + sizeWords * 2;
+      if (func === 0x0F43) out.push(splitDib(b.subarray(off + 6 + 4 + 2 + 16, end)));      // STRETCHDIB
+      else if (func === 0x0B41) out.push(splitDib(b.subarray(off + 6 + 4 + 16, end)));      // DIBSTRETCHBLT
+      else if (func === 0x0940) out.push(splitDib(b.subarray(off + 6 + 4 + 8, end)));       // DIBBITBLT
+      if (func === 0) break;
+      off = end;
+    }
+    return out.filter(Boolean);
+  }
+
+  function dibToBmp(bmi, bits) {
+    var total = 14 + bmi.length + bits.length;
+    var out = new Uint8Array(total);
+    var dv = new DataView(out.buffer);
+    out[0] = 0x42; out[1] = 0x4D; // 'BM'
+    dv.setUint32(2, total, true);
+    dv.setUint32(6, 0, true);
+    dv.setUint32(10, 14 + bmi.length, true);
+    out.set(bmi, 14);
+    out.set(bits, 14 + bmi.length);
+    return out;
+  }
+
+  // 生WMF/EMFバイト列 -> 最大DIBのBMPバイト列（失敗時 null）
+  function wmfToBmp(raw) {
+    var cands = [];
+    var emf = extractEmf(raw);
+    if (emf.length >= 4 && emf[0] === 1 && emf[1] === 0 && emf[2] === 0 && emf[3] === 0) {
+      cands = cands.concat(dibsFromEmf(emf));
+    }
+    cands = cands.concat(dibsFromWmf(raw));
+    var best = null, bestArea = -1;
+    for (var i = 0; i < cands.length; i++) {
+      var c = cands[i];
+      if (!c) continue;
+      var bmi = c[0];
+      if (bmi.length < 40) continue;
+      var dv = new DataView(bmi.buffer, bmi.byteOffset, bmi.byteLength);
+      var w = dv.getInt32(4, true), h = dv.getInt32(8, true);
+      var area = Math.abs(w * h);
+      if (area > bestArea) { bestArea = area; best = c; }
+    }
+    return best ? dibToBmp(best[0], best[1]) : null;
+  }
+
+  // ===================================================================
+  // 3. BMP -> PNG data URI（ブラウザ内蔵のBMPデコーダ + Canvas）
+  // ===================================================================
+  function bmpToPng(bmpBytes) {
+    return new Promise(function (resolve) {
+      var blob = new Blob([bmpBytes], { type: 'image/bmp' });
+      var url = URL.createObjectURL(blob);
+      var img = new Image();
+      img.onload = function () {
+        var w = img.naturalWidth, h = img.naturalHeight;
+        URL.revokeObjectURL(url);
+        if (!w || !h) { resolve(null); return; }
+        try {
+          var canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0);
+          resolve({ uri: canvas.toDataURL('image/png'), w: w, h: h });
+        } catch (e) { resolve(null); }
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
+  }
+
+  // ===================================================================
+  // 4. ノードHTML生成 + 全体変換
+  // ===================================================================
+  var IMG_SPLIT = /\x00IMG:(\d+)\x00/;
+
+  function buildNodeHtml(paras, uris) {
+    var divs = [];
+    for (var pi = 0; pi < paras.length; pi++) {
+      var parts = paras[pi].split(IMG_SPLIT);
+      var buf = '';
+      for (var j = 0; j < parts.length; j++) {
+        if (j % 2 === 1) {
+          var info = uris[parseInt(parts[j], 10)];
+          if (info) buf += '<img src="' + info.uri + '" width="' + info.w + '" height="' + info.h + '" alt="">';
+        } else if (parts[j]) {
+          buf += escapeHtml(parts[j]).replace(/\t/g, '&#9;');
+        }
+      }
+      divs.push('<div>' + (buf || '<br>') + '</div>');
+    }
+    return divs.join('');
+  }
+
+  async function nodeRtfToHtml(rtf) {
+    if (!rtf) return '';
+    var parsed = rtfBodyToParas(rtf);
+    var uris = {};
+    for (var bi = 0; bi < parsed.blobs.length; bi++) {
+      var bmp = wmfToBmp(parsed.blobs[bi]);
+      if (bmp) {
+        var png = await bmpToPng(bmp);
+        if (png) uris[bi] = png;
+      }
+    }
+    return buildNodeHtml(parsed.paras, uris);
+  }
+
+  // text: decodeCP932済みの .nna テキスト全体。onProgress(done,total) は任意。
+  async function convertNnaToCompact(text, title, onProgress) {
+    var doc = window.NanaCore.parseNna(text); // { roots }
+    var total = 0;
+    window.NanaCore.walkTree(doc.roots, function () { total++; });
+    var done = 0;
+
+    async function walk(nodes) {
+      var out = [];
+      for (var i = 0; i < nodes.length; i++) {
+        var nd = nodes[i];
+        var html = await nodeRtfToHtml(nd.rtf);
+        done++;
+        if (onProgress && (done % 10 === 0 || done === total)) onProgress(done, total);
+        out.push({ title: nd.title, html: html, children: await walk(nd.children || []) });
+      }
+      return out;
+    }
+
+    var roots = await walk(doc.roots);
+    return { format: 'nanatree-web-compact', version: 1, title: title || '無題', roots: roots };
+  }
+
+  window.NanaImport = {
+    convertNnaToCompact: convertNnaToCompact,
+    wmfToBmp: wmfToBmp,   // テスト用に公開
+    bmpToPng: bmpToPng
+  };
+})();
+
+</script>
+  <script>
+/*
+ * app.js — NanaTree Web版 UI層
+ *
+ * core.js（パーサ/シリアライザ、DOM非依存）と window.NanaRTF（RTF<->HTML、CP932。
+ * 別ファイル rtf.js が提供、未読み込みでも動作を継続する）を利用して、
+ * ツリー編集・リッチテキスト編集・ファイル入出力・自動保存・検索を行う。
+ *
+ * classic <script> 読み込み前提。ESモジュール/fetch()によるローカルファイル読込は使用しない。
+ */
+
+(function () {
+  'use strict';
+
+  // =====================================================================
+  // 状態
+  // =====================================================================
+
+  var AUTOSAVE_KEY = 'nanaweb.autosave';
+  var STATE_COLORS = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#1abc9c', '#3498db', '#9b59b6', '#34495e'];
+
+  var state = {
+    doc: { title: '無題', roots: [] },
+    selectedNode: null,
+    nodeEls: {},
+    fileKind: null,     // 'nna' | 'nnz' | 'opml'
+    fileName: null,
+    fileHandle: null,   // FileSystemFileHandle（showSaveFilePicker利用時のみ）
+    docDirty: false
+  };
+
+  var dragState = { node: null, pos: null, targetNode: null };
+  var savedRange = null;
+  var autosaveTimer = null;
+  var pendingCompactImport = false;
+  var searchMatches = [];
+  var searchIndex = -1;
+  var navHistory = [];      // 訪問したノードidの履歴（ブラウザの戻る/進む相当）
+  var navPos = -1;          // navHistory 内の現在位置
+  var navigating = false;   // 戻る/進む操作中は履歴に記録しない
+
+  var dom = {};
+
+  // =====================================================================
+  // 初期化
+  // =====================================================================
+
+  document.addEventListener('DOMContentLoaded', init);
+
+  function init() {
+    cacheDom();
+
+    if (!hasNanaRTF()) {
+      dom.rtfMissingBanner.hidden = false;
+      dom.btnSaveNna.disabled = true;
+      dom.btnSaveNna.title = (dom.btnSaveNna.title || '') + '（rtf.js が読み込まれていないため利用できません）';
+    }
+
+    try { document.execCommand('styleWithCSS', false, true); } catch (e) { /* 無視 */ }
+
+    wireHeaderToolbar();
+    wireTreeToolbar();
+    wireEditorToolbar();
+    wireContextMenu();
+    wireSplitter();
+    wireFileDrop();
+    wireKeyboardShortcuts();
+    wireTreeKeyboard();
+    wireSearch();
+    window.addEventListener('beforeunload', function (e) {
+      if (state.docDirty) { e.preventDefault(); e.returnValue = ''; }
+    });
+
+    renderTree();
+    updateDocTitleDisplay();
+    checkAutosaveOnStartup();
+    setStatus(hasNanaRTF() ? '準備完了' : '準備完了（rtf.js未読み込み: 本文編集と.nna/.nnz入出力は無効）', !hasNanaRTF());
+  }
+
+  function cacheDom() {
+    var ids = [
+      'btnNew', 'btnOpen', 'btnSaveNna', 'btnFileMenu', 'fileMenu',
+      'btnNavBack', 'btnNavForward', 'btnUndo', 'btnRedo',
+      'replaceInput', 'btnReplaceAll', 'btnReplaceAllDoc',
+      'searchInput', 'btnSearchNext', 'searchCount', 'docTitleDisplay',
+      'rtfMissingBanner', 'autosaveBanner', 'btnAutosaveRestore', 'btnAutosaveDiscard',
+      'appBody', 'treePane', 'splitter', 'editorPane',
+      'treeScroll', 'treeRoot',
+      'btnAddSibling', 'btnAddChild', 'btnDeleteNode', 'btnMoveUp', 'btnMoveDown', 'btnOutdent', 'btnIndent',
+      'nodeTitleInput', 'editorToolbar', 'editorContent',
+      'fontSizeSelect', 'foreColorInput', 'hiliteColorInput', 'btnHiliteOff', 'btnRemoveFormat',
+      'btnInsertLink', 'btnUnlink',
+      'statusMessage', 'autosaveStatus', 'contextMenu', 'dndOverlay', 'fileInput'
+    ];
+    ids.forEach(function (id) {
+      if (!id) return;
+      dom[id] = document.getElementById(id);
+    });
+  }
+
+  function hasNanaRTF() {
+    return !!(window.NanaRTF &&
+      typeof window.NanaRTF.rtfToHtml === 'function' &&
+      typeof window.NanaRTF.htmlToRtf === 'function' &&
+      typeof window.NanaRTF.decodeCP932 === 'function' &&
+      typeof window.NanaRTF.encodeCP932 === 'function');
+  }
+
+  // =====================================================================
+  // ツリー データ操作ヘルパー
+  // =====================================================================
+
+  function hasChildren(node) {
+    return !!(node.children && node.children.length);
+  }
+
+  function countDescendants(node) {
+    var n = 0;
+    (node.children || []).forEach(function (c) { n += 1 + countDescendants(c); });
+    return n;
+  }
+
+  /** node を含む配列・親ノード・添字を探す。見つからなければ null。 */
+  function findNodeContext(node) {
+    function search(nodes, parentNode) {
+      for (var i = 0; i < nodes.length; i++) {
+        if (nodes[i] === node) return { parentNode: parentNode, array: nodes, index: i };
+        if (nodes[i].children && nodes[i].children.length) {
+          var r = search(nodes[i].children, nodes[i]);
+          if (r) return r;
+        }
+      }
+      return null;
+    }
+    return search(state.doc.roots, null);
+  }
+
+  function isDescendant(ancestor, node) {
+    if (!ancestor.children) return false;
+    for (var i = 0; i < ancestor.children.length; i++) {
+      if (ancestor.children[i] === node) return true;
+      if (isDescendant(ancestor.children[i], node)) return true;
+    }
+    return false;
+  }
+
+  function expandAncestors(node) {
+    var ctx = findNodeContext(node);
+    var p = ctx ? ctx.parentNode : null;
+    while (p) {
+      p.expanded = true;
+      var pctx = findNodeContext(p);
+      p = pctx ? pctx.parentNode : null;
+    }
+  }
+
+  /** localStorageから復元した木、あるいは外部由来の木のノードIDを、このセッションの
+   *  カウンタで振り直す（新規追加ノードとのID衝突を防ぐ）。 */
+  function reassignIds(node) {
+    node.id = (window.nextNodeId ? window.nextNodeId() : ('n' + Math.random().toString(36).slice(2)));
+    (node.children || []).forEach(reassignIds);
+  }
+
+  function stateColor(idx) {
+    var n = STATE_COLORS.length;
+    return STATE_COLORS[((idx % n) + n) % n];
+  }
+
+  // =====================================================================
+  // ツリー描画
+  // =====================================================================
+
+  function renderTree() {
+    var root = dom.treeRoot;
+    root.innerHTML = '';
+    state.nodeEls = {};
+
+    function renderList(nodes, depth) {
+      nodes.forEach(function (node) {
+        var row = createNodeRow(node, depth);
+        root.appendChild(row);
+        state.nodeEls[node.id] = row;
+        if (node.expanded && hasChildren(node)) {
+          renderList(node.children, depth + 1);
+        }
+      });
+    }
+
+    renderList(state.doc.roots, 0);
+    updateSelectionHighlight();
+    updateTreeToolbarState();
+  }
+
+  function createNodeRow(node, depth) {
+    var row = document.createElement('div');
+    row.className = 'tree-node-row';
+    row.style.paddingLeft = (6 + depth * 18) + 'px';
+    row.dataset.nodeId = node.id;
+    row.draggable = true;
+    row.setAttribute('role', 'treeitem');
+    if (node.focused) row.classList.add('focused-marker');
+
+    var twisty = document.createElement('span');
+    var leaf = !hasChildren(node);
+    twisty.className = 'twisty' + (leaf ? ' leaf' : '');
+    twisty.textContent = leaf ? '' : (node.expanded ? '▾' : '▸');
+    twisty.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (leaf) return;
+      node.expanded = !node.expanded;
+      renderTree();
+    });
+    row.appendChild(twisty);
+
+    var dot = document.createElement('span');
+    dot.className = 'state-dot';
+    if (typeof node.stateIndex === 'number' && node.stateIndex !== -1) {
+      dot.style.background = stateColor(node.stateIndex);
+      dot.style.border = '1px solid rgba(0,0,0,0.15)';
+      dot.title = '状態アイコン #' + node.stateIndex;
+    }
+    row.appendChild(dot);
+
+    var title = document.createElement('span');
+    title.className = 'title' + (node.title ? '' : ' empty-title');
+    title.textContent = node.title || '（無題）';
+    row.appendChild(title);
+
+    row.addEventListener('click', function () { selectNode(node); focusTree(); });
+    row.addEventListener('dblclick', function (e) { e.stopPropagation(); startRename(node, row); });
+    row.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+      selectNode(node);
+      openContextMenu(e.clientX, e.clientY);
+    });
+
+    row.addEventListener('dragstart', function (e) {
+      dragState.node = node;
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', node.id); } catch (err) { /* 無視 */ }
+    });
+    row.addEventListener('dragover', function (e) { onRowDragOver(e, row, node); });
+    row.addEventListener('dragleave', function () { row.classList.remove('drop-before', 'drop-after', 'drop-inside'); });
+    row.addEventListener('drop', function (e) { onRowDrop(e, row, node); });
+    row.addEventListener('dragend', function () { dragState.node = null; clearAllDropIndicators(); });
+
+    return row;
+  }
+
+  function clearAllDropIndicators() {
+    var rows = dom.treeRoot.querySelectorAll('.tree-node-row');
+    rows.forEach(function (r) { r.classList.remove('drop-before', 'drop-after', 'drop-inside'); });
+  }
+
+  function onRowDragOver(e, row, targetNode) {
+    if (!dragState.node) return;
+    e.preventDefault();
+    e.stopPropagation();
+    var rect = row.getBoundingClientRect();
+    var ratio = (e.clientY - rect.top) / rect.height;
+    var pos;
+    if (ratio < 0.25) pos = 'before';
+    else if (ratio > 0.75) pos = 'after';
+    else pos = 'inside';
+
+    if (targetNode === dragState.node || isDescendant(dragState.node, targetNode)) {
+      pos = null;
+    }
+
+    clearAllDropIndicators();
+    if (pos === 'before') row.classList.add('drop-before');
+    else if (pos === 'after') row.classList.add('drop-after');
+    else if (pos === 'inside') row.classList.add('drop-inside');
+
+    dragState.pos = pos;
+    dragState.targetNode = targetNode;
+    e.dataTransfer.dropEffect = pos ? 'move' : 'none';
+  }
+
+  function onRowDrop(e, row, targetNode) {
+    e.preventDefault();
+    e.stopPropagation();
+    clearAllDropIndicators();
+    var node = dragState.node;
+    var pos = dragState.pos;
+    dragState.node = null;
+    if (!node || !pos) return;
+
+    var srcCtx = findNodeContext(node);
+    if (!srcCtx) return;
+    srcCtx.array.splice(srcCtx.index, 1);
+
+    if (pos === 'inside') {
+      targetNode.children = targetNode.children || [];
+      targetNode.children.push(node);
+      targetNode.expanded = true;
+    } else {
+      var tgtCtx = findNodeContext(targetNode);
+      if (!tgtCtx) { // 万一見つからない場合はルート末尾に戻す（データ消失を防ぐ）
+        state.doc.roots.push(node);
+      } else {
+        var insertIndex = pos === 'before' ? tgtCtx.index : tgtCtx.index + 1;
+        tgtCtx.array.splice(insertIndex, 0, node);
+      }
+    }
+
+    renderTree();
+    selectNode(node);
+    markDocDirty();
+    scheduleAutosave();
+  }
+
+  function updateSelectionHighlight() {
+    Object.keys(state.nodeEls).forEach(function (id) {
+      var el = state.nodeEls[id];
+      var isSel = state.selectedNode && state.selectedNode.id === id;
+      el.classList.toggle('selected', !!isSel);
+    });
+  }
+
+  function scrollNodeIntoView(node) {
+    var el = state.nodeEls[node.id];
+    if (el) el.scrollIntoView({ block: 'nearest' });
+  }
+
+  function updateTreeToolbarState() {
+    var has = !!state.selectedNode;
+    [dom.btnAddChild, dom.btnDeleteNode, dom.btnMoveUp, dom.btnMoveDown, dom.btnOutdent, dom.btnIndent]
+      .forEach(function (b) { b.disabled = !has; });
+  }
+
+  // =====================================================================
+  // 名前の変更（インライン編集）
+  // =====================================================================
+
+  function startRename(node, row) {
+    if (!row) return;
+    var titleEl = row.querySelector('.title');
+    if (!titleEl) return;
+
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'title-input';
+    input.value = node.title || '';
+    titleEl.replaceWith(input);
+    input.focus();
+    input.select();
+
+    var committed = false;
+    function commit() {
+      if (committed) return;
+      committed = true;
+      renameNodeTo(node, input.value);
+      renderTree();
+    }
+    function cancel() {
+      if (committed) return;
+      committed = true;
+      renderTree();
+    }
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); commit(); }
+      else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+      e.stopPropagation();
+    });
+    input.addEventListener('blur', function () { commit(); });
+    input.addEventListener('click', function (e) { e.stopPropagation(); });
+  }
+
+  function renameNodeTo(node, newTitle) {
+    if (node.title === newTitle) return;
+    node.title = newTitle;
+    if (state.selectedNode === node && dom.nodeTitleInput.value !== newTitle) {
+      dom.nodeTitleInput.value = newTitle;
+    }
+    markDocDirty();
+    scheduleAutosave();
+  }
+
+  function startRenameForNode(node) {
+    var row = state.nodeEls[node.id];
+    if (row) startRename(node, row);
+  }
+
+  // =====================================================================
+  // ツリー編集アクション
+  // =====================================================================
+
+  function addSiblingNode() {
+    var sel = state.selectedNode;
+    var newNode = createNode('');
+    if (!sel) {
+      state.doc.roots.push(newNode);
+    } else {
+      var ctx = findNodeContext(sel);
+      if (ctx) ctx.array.splice(ctx.index + 1, 0, newNode);
+      else state.doc.roots.push(newNode);
+    }
+    renderTree();
+    selectNode(newNode);
+    startRenameForNode(newNode);
+    markDocDirty();
+    scheduleAutosave();
+  }
+
+  function addChildNode() {
+    var sel = state.selectedNode;
+    var newNode = createNode('');
+    if (!sel) {
+      state.doc.roots.push(newNode);
+    } else {
+      sel.children = sel.children || [];
+      sel.children.push(newNode);
+      sel.expanded = true;
+    }
+    renderTree();
+    selectNode(newNode);
+    startRenameForNode(newNode);
+    markDocDirty();
+    scheduleAutosave();
+  }
+
+  function deleteSelectedNode() {
+    var sel = state.selectedNode;
+    if (!sel) return;
+    var label = sel.title || '（無題ノード）';
+    var count = countDescendants(sel);
+    var msg = count > 0
+      ? '「' + label + '」と、その子ノード ' + count + ' 件をすべて削除します。この操作は取り消せません。よろしいですか？'
+      : '「' + label + '」を削除します。この操作は取り消せません。よろしいですか？';
+    if (!window.confirm(msg)) return;
+
+    var ctx = findNodeContext(sel);
+    if (!ctx) return;
+    ctx.array.splice(ctx.index, 1);
+
+    state.selectedNode = null;
+    dom.editorContent.innerHTML = '';
+    dom.editorContent.contentEditable = 'false';
+    dom.nodeTitleInput.value = '';
+    dom.nodeTitleInput.disabled = true;
+
+    renderTree();
+    markDocDirty();
+    scheduleAutosave();
+    setStatus('削除しました: ' + label);
+  }
+
+  function moveNodeUp() {
+    var sel = state.selectedNode; if (!sel) return;
+    var ctx = findNodeContext(sel); if (!ctx || ctx.index === 0) return;
+    var arr = ctx.array;
+    var tmp = arr[ctx.index - 1];
+    arr[ctx.index - 1] = arr[ctx.index];
+    arr[ctx.index] = tmp;
+    renderTree();
+    updateSelectionHighlight();
+    scrollNodeIntoView(sel);
+    markDocDirty();
+    scheduleAutosave();
+  }
+
+  function moveNodeDown() {
+    var sel = state.selectedNode; if (!sel) return;
+    var ctx = findNodeContext(sel); if (!ctx || ctx.index >= ctx.array.length - 1) return;
+    var arr = ctx.array;
+    var tmp = arr[ctx.index + 1];
+    arr[ctx.index + 1] = arr[ctx.index];
+    arr[ctx.index] = tmp;
+    renderTree();
+    updateSelectionHighlight();
+    scrollNodeIntoView(sel);
+    markDocDirty();
+    scheduleAutosave();
+  }
+
+  function indentNode() {
+    var sel = state.selectedNode; if (!sel) return;
+    var ctx = findNodeContext(sel); if (!ctx) return;
+    if (ctx.index === 0) { setStatus('これ以上階層を下げられません（直前に兄ノードがありません）。', true); return; }
+    var prevSibling = ctx.array[ctx.index - 1];
+    ctx.array.splice(ctx.index, 1);
+    prevSibling.children = prevSibling.children || [];
+    prevSibling.children.push(sel);
+    prevSibling.expanded = true;
+    renderTree();
+    updateSelectionHighlight();
+    scrollNodeIntoView(sel);
+    markDocDirty();
+    scheduleAutosave();
+  }
+
+  function outdentNode() {
+    var sel = state.selectedNode; if (!sel) return;
+    var ctx = findNodeContext(sel); if (!ctx) return;
+    if (!ctx.parentNode) { setStatus('これ以上階層を上げられません（すでに最上位です）。', true); return; }
+    var parentCtx = findNodeContext(ctx.parentNode);
+    if (!parentCtx) return;
+    ctx.array.splice(ctx.index, 1);
+    parentCtx.array.splice(parentCtx.index + 1, 0, sel);
+    renderTree();
+    updateSelectionHighlight();
+    scrollNodeIntoView(sel);
+    markDocDirty();
+    scheduleAutosave();
+  }
+
+  // =====================================================================
+  // 選択・エディタ同期
+  // =====================================================================
+
+  function resolveNodeHtml(node) {
+    if (node.html !== null) return;
+    if (!node.rtf) { node.html = ''; return; }
+    if (hasNanaRTF()) {
+      try {
+        node.html = window.NanaRTF.rtfToHtml(node.rtf);
+      } catch (err) {
+        console.error(err);
+        setStatus('本文の変換に失敗しました: ' + (err && err.message ? err.message : err), true);
+      }
+    }
+    // NanaRTFが無い場合は node.html を null のままにし、呼び出し元でフォールバック表示する。
+  }
+
+  function selectNode(node) {
+    if (state.selectedNode === node) return;
+    commitEditorToNode(state.selectedNode);
+
+    state.selectedNode = node;
+    updateSelectionHighlight();
+    updateTreeToolbarState();
+
+    dom.nodeTitleInput.disabled = false;
+    dom.nodeTitleInput.value = node.title || '';
+
+    resolveNodeHtml(node);
+
+    dom.editorContent.innerHTML = '';
+    if (node.html !== null) {
+      // 表示時に <nlink>見出し</nlink> をクリック可能なリンク(<a>)へ変換する。
+      dom.editorContent.innerHTML = renderNlinks(node.html);
+      // ブラウザによるHTML正規化後の値で同期しておく。こうしないと「開いただけ」のノードが
+      // 正規化差分だけで誤ってdirty判定されてしまう（無劣化パススルーの原則を守るため）。
+      // 保存用の正規形はリンクを <nlink> タグへ戻したもの。
+      node.html = stripNlinks(dom.editorContent.innerHTML);
+      dom.editorContent.contentEditable = 'true';
+    } else {
+      var notice = document.createElement('div');
+      notice.style.color = 'var(--text-muted)';
+      notice.style.fontStyle = 'italic';
+      notice.textContent = 'この本文は rtf.js が読み込まれていないため表示できません。元データは失われていません。';
+      dom.editorContent.appendChild(notice);
+      dom.editorContent.contentEditable = 'false';
+    }
+
+    recordNavigation(node);
+    syncToolbarState();
+  }
+
+  // =====================================================================
+  // ノード訪問履歴（ブラウザの戻る／進む相当。本家NanaTreeのナビ機能）
+  // =====================================================================
+
+  function findNodeById(id) {
+    var found = null;
+    walkTree(state.doc.roots, function (n) { if (!found && n.id === id) found = n; });
+    return found;
+  }
+
+  function recordNavigation(node) {
+    if (navigating || !node) return;
+    // 同じノードを連続で記録しない
+    if (navPos >= 0 && navHistory[navPos] === node.id) return;
+    // 途中から新しいノードへ移ったら、それ以降（進む側）の履歴を捨てる
+    navHistory = navHistory.slice(0, navPos + 1);
+    navHistory.push(node.id);
+    if (navHistory.length > 300) navHistory.shift();   // 上限
+    navPos = navHistory.length - 1;
+    updateNavButtons();
+  }
+
+  function navGo(delta) {
+    var target = navPos + delta;
+    // 削除済みノードのidは飛ばす
+    while (target >= 0 && target < navHistory.length && !findNodeById(navHistory[target])) {
+      target += delta;
+    }
+    if (target < 0 || target >= navHistory.length) { updateNavButtons(); return; }
+    var node = findNodeById(navHistory[target]);
+    if (!node) { updateNavButtons(); return; }
+    navPos = target;
+    navigating = true;
+    expandAncestors(node);
+    renderTree();
+    selectNode(node);
+    scrollNodeIntoView(node);
+    navigating = false;
+    updateNavButtons();
+  }
+
+  function updateNavButtons() {
+    if (dom.btnNavBack) dom.btnNavBack.disabled = !(navPos > 0);
+    if (dom.btnNavForward) dom.btnNavForward.disabled = !(navPos >= 0 && navPos < navHistory.length - 1);
+  }
+
+  function resetNavigation() {
+    navHistory = [];
+    navPos = -1;
+    updateNavButtons();
+  }
+
+  // =====================================================================
+  // 元に戻す / やり直し（本文エディタ）
+  // =====================================================================
+
+  function editorUndo() {
+    if (dom.editorContent.contentEditable !== 'true') { setStatus('本文を選択しているときに使えます。', true); return; }
+    dom.editorContent.focus();
+    try { document.execCommand('undo'); } catch (e) { /* 無視 */ }
+    commitEditorToNode(state.selectedNode);
+  }
+
+  function editorRedo() {
+    if (dom.editorContent.contentEditable !== 'true') { setStatus('本文を選択しているときに使えます。', true); return; }
+    dom.editorContent.focus();
+    try { document.execCommand('redo'); } catch (e) { /* 無視 */ }
+    commitEditorToNode(state.selectedNode);
+  }
+
+  // =====================================================================
+  // 置換
+  // =====================================================================
+
+  // HTML文字列内のテキスト部分だけを from->to に置換して {html, count} を返す（タグは壊さない）。
+  function replaceInHtmlText(html, from, to) {
+    var tmp = document.createElement('div');
+    tmp.innerHTML = html || '';
+    var count = 0;
+    var walker = document.createTreeWalker(tmp, NodeFilter.SHOW_TEXT, null);
+    var textNodes = [];
+    var t;
+    while ((t = walker.nextNode())) textNodes.push(t);
+    for (var i = 0; i < textNodes.length; i++) {
+      var v = textNodes[i].nodeValue;
+      if (v && v.indexOf(from) !== -1) {
+        var parts = v.split(from);
+        count += parts.length - 1;
+        textNodes[i].nodeValue = parts.join(to);
+      }
+    }
+    return { html: tmp.innerHTML, count: count };
+  }
+
+  function countOccurrences(s, sub) {
+    if (!s || !sub) return 0;
+    return s.split(sub).length - 1;
+  }
+
+  function doReplace(scope) {
+    var from = dom.searchInput.value;
+    var to = dom.replaceInput.value;
+    if (!from) { setStatus('置換するには、上の検索欄に「探す文字」を入れてください。', true); return; }
+
+    // 開いているノードの未確定編集を先に取り込む
+    commitEditorToNode(state.selectedNode);
+
+    // 全体置換では、まだ開いていないノードの本文（RTF）もHTMLへ展開してから置換する。
+    // これをしないと、一度も開いていないノードの本文が置換対象から漏れる。
+    if (scope === 'all') ensureAllHtmlResolved();
+
+    var total = 0;
+    var nodesChanged = 0;
+
+    function applyToNode(node) {
+      var c = 0;
+      // タイトル
+      if (node.title && node.title.indexOf(from) !== -1) {
+        c += countOccurrences(node.title, from);
+        node.title = node.title.split(from).join(to);
+      }
+      // 本文（htmlのテキスト部分のみ）
+      if (node.html) {
+        var r = replaceInHtmlText(node.html, from, to);
+        if (r.count > 0) { node.html = r.html; c += r.count; }
+      }
+      if (c > 0) { node.dirty = true; nodesChanged++; total += c; }
+    }
+
+    if (scope === 'all') {
+      walkTree(state.doc.roots, applyToNode);
+    } else {
+      if (!state.selectedNode) { setStatus('置換する項目を左のツリーで選んでください。', true); return; }
+      applyToNode(state.selectedNode);
+    }
+
+    if (total === 0) { setStatus('「' + from + '」は見つかりませんでした。', true); return; }
+
+    markDocDirty();
+    scheduleAutosave();
+    // 表示を更新
+    renderTree();
+    if (state.selectedNode) {
+      var keep = state.selectedNode;
+      state.selectedNode = null;      // selectNode の同一ノード早期returnを回避して再描画
+      selectNode(keep);
+      scrollNodeIntoView(keep);
+    }
+    setStatus('置換しました: ' + total + '件' + (scope === 'all' ? '（' + nodesChanged + '項目）' : '') +
+      '  「' + from + '」→「' + to + '」');
+  }
+
+  // =====================================================================
+  // ツリーのキーボード操作（十字キーで移動・展開／NanaTree本家の操作感）
+  // =====================================================================
+
+  function focusTree() {
+    if (dom.treeScroll) dom.treeScroll.focus();
+  }
+
+  /** 現在画面に見えているノードを描画順（上から下）に並べた配列を返す。 */
+  function visibleNodesInOrder() {
+    var list = [];
+    (function rec(nodes) {
+      nodes.forEach(function (node) {
+        list.push(node);
+        if (node.expanded && hasChildren(node)) rec(node.children);
+      });
+    })(state.doc.roots);
+    return list;
+  }
+
+  function selectAndReveal(node) {
+    if (!node) return;
+    selectNode(node);
+    scrollNodeIntoView(node);
+  }
+
+  function wireTreeKeyboard() {
+    if (!dom.treeScroll) return;
+    dom.treeScroll.setAttribute('tabindex', '0');
+    dom.treeScroll.addEventListener('keydown', function (e) {
+      // インライン改名中（入力欄にフォーカス）は乗っ取らない
+      if (e.target && e.target.tagName === 'INPUT') return;
+      var visible = visibleNodesInOrder();
+      if (!visible.length) return;
+      var node = state.selectedNode;
+      if (!node || visible.indexOf(node) === -1) {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Home') {
+          e.preventDefault(); selectAndReveal(visible[0]);
+        }
+        return;
+      }
+      var idx = visible.indexOf(node);
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          if (idx < visible.length - 1) selectAndReveal(visible[idx + 1]);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          if (idx > 0) selectAndReveal(visible[idx - 1]);
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          if (hasChildren(node)) {
+            if (!node.expanded) { node.expanded = true; renderTree(); }
+            else selectAndReveal(node.children[0]);
+          }
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          if (hasChildren(node) && node.expanded) {
+            node.expanded = false; renderTree();
+          } else {
+            var ctx = findNodeContext(node);
+            if (ctx && ctx.parentNode) selectAndReveal(ctx.parentNode);
+          }
+          break;
+        case 'Home':
+          e.preventDefault(); selectAndReveal(visible[0]);
+          break;
+        case 'End':
+          e.preventDefault(); selectAndReveal(visible[visible.length - 1]);
+          break;
+        case 'Enter':
+        case 'F2':
+          e.preventDefault(); startRenameForNode(node);
+          break;
+      }
+    });
+  }
+
+  function commitEditorToNode(node) {
+    if (!node) return;
+    if (dom.editorContent.contentEditable !== 'true') return;
+    // 表示用の <a class="nlink"> を保存用の <nlink> タグへ戻してから比較・保存する。
+    var newHtml = stripNlinks(dom.editorContent.innerHTML);
+    if (newHtml !== node.html) {
+      node.html = newHtml;
+      node.dirty = true;
+      markDocDirty();
+      scheduleAutosave();
+    }
+  }
+
+  // =====================================================================
+  // リッチテキスト編集ツールバー（execCommand）
+  // =====================================================================
+
+  function saveSelectionIfInEditor() {
+    var sel = window.getSelection();
+    if (sel && sel.rangeCount && dom.editorContent.contains(sel.anchorNode)) {
+      savedRange = sel.getRangeAt(0).cloneRange();
+    }
+  }
+
+  function restoreSelection() {
+    if (!savedRange) return;
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(savedRange);
+  }
+
+  function execToolbarCommand(cmd, value) {
+    if (dom.editorContent.contentEditable !== 'true') return;
+    dom.editorContent.focus();
+    restoreSelection();
+    try { document.execCommand(cmd, false, value === undefined ? null : value); } catch (e) { /* 無視 */ }
+    syncToolbarState();
+    commitEditorToNode(state.selectedNode);
+  }
+
+  function execHilite(color) {
+    if (dom.editorContent.contentEditable !== 'true') return;
+    dom.editorContent.focus();
+    restoreSelection();
+    var ok = false;
+    try { ok = document.execCommand('hiliteColor', false, color); } catch (e) { /* 無視 */ }
+    if (!ok) { try { document.execCommand('backColor', false, color); } catch (e) { /* 無視 */ } }
+    syncToolbarState();
+    commitEditorToNode(state.selectedNode);
+  }
+
+  var TOOLBAR_STATE_CMDS = [
+    'bold', 'italic', 'underline', 'strikeThrough',
+    'justifyLeft', 'justifyCenter', 'justifyRight',
+    'insertUnorderedList', 'insertOrderedList',
+    'subscript', 'superscript'
+  ];
+
+  function syncToolbarState() {
+    if (dom.editorContent.contentEditable !== 'true') return;
+    TOOLBAR_STATE_CMDS.forEach(function (cmd) {
+      var btn = dom.editorToolbar.querySelector('[data-cmd="' + cmd + '"]');
+      if (!btn) return;
+      var active = false;
+      try { active = document.queryCommandState(cmd); } catch (e) { /* 無視 */ }
+      btn.classList.toggle('active', active);
+    });
+  }
+
+  function wireEditorToolbar() {
+    dom.editorToolbar.querySelectorAll('button[data-cmd]').forEach(function (btn) {
+      btn.addEventListener('click', function () { execToolbarCommand(btn.dataset.cmd); });
+    });
+    dom.fontSizeSelect.addEventListener('change', function () {
+      execToolbarCommand('fontSize', dom.fontSizeSelect.value);
+    });
+    dom.foreColorInput.addEventListener('input', function () {
+      execToolbarCommand('foreColor', dom.foreColorInput.value);
+    });
+    dom.hiliteColorInput.addEventListener('input', function () {
+      execHilite(dom.hiliteColorInput.value);
+    });
+    dom.btnHiliteOff.addEventListener('click', function () { execHilite('transparent'); });
+    dom.btnRemoveFormat.addEventListener('click', function () { execToolbarCommand('removeFormat'); });
+    dom.btnInsertLink.addEventListener('click', insertNlink);
+    dom.btnUnlink.addEventListener('click', unlinkNlink);
+
+    dom.editorContent.addEventListener('input', function () { commitEditorToNode(state.selectedNode); });
+    dom.editorContent.addEventListener('mouseup', saveSelectionIfInEditor);
+    dom.editorContent.addEventListener('keyup', saveSelectionIfInEditor);
+    document.addEventListener('selectionchange', function () {
+      saveSelectionIfInEditor();
+      syncToolbarState();
+    });
+
+    dom.nodeTitleInput.addEventListener('input', function () {
+      if (state.selectedNode) renameNodeTo(state.selectedNode, dom.nodeTitleInput.value);
+    });
+
+    // リンク(<a class="nlink">)はシングルクリックで同名ノードへジャンプ
+    dom.editorContent.addEventListener('click', function (e) {
+      var a = e.target && e.target.closest ? e.target.closest('a.nlink') : null;
+      if (a) {
+        e.preventDefault();
+        activateNlink(a.getAttribute('data-nlink') || a.textContent || '');
+      }
+    });
+    // リンク化されなかった（書式が分断された等）<nlink> はダブルクリックで従来どおりジャンプ
+    dom.editorContent.addEventListener('dblclick', function (e) {
+      var info = findNlinkAtPoint(e.clientX, e.clientY);
+      if (info) {
+        e.preventDefault();
+        activateNlink(info.title);
+      }
+    });
+  }
+
+  // =====================================================================
+  // <nlink> ノードリンク
+  // =====================================================================
+
+  function findNlinkAtPoint(x, y) {
+    if (!document.caretRangeFromPoint) return null;
+    var range = document.caretRangeFromPoint(x, y);
+    if (!range) return null;
+    var container = range.startContainer;
+    if (container.nodeType !== 3) return null;
+    var text = container.nodeValue || '';
+    var offset = range.startOffset;
+    var re = /<nlink>([\s\S]*?)<\/nlink>/g;
+    var m;
+    while ((m = re.exec(text))) {
+      var start = m.index;
+      var end = start + m[0].length;
+      if (offset >= start && offset <= end) {
+        return { title: m[1] };
+      }
+    }
+    return null;
+  }
+
+  // 保存用HTML内の <nlink>見出し</nlink>（＝ &lt;nlink&gt;…&lt;/nlink&gt; とエスケープ済み）を、
+  // クリック可能なリンク <a class="nlink" data-nlink="見出し"> へ変換する（表示専用）。
+  // 中に別タグを含む複雑なケース（rtfで書式が分断された場合）は変換せず従来のダブルクリックに委ねる。
+  function renderNlinks(html) {
+    if (!html) return html;
+    return html.replace(
+      /&lt;nlink&gt;((?:(?!&lt;\/?nlink&gt;)[^<>])*?)&lt;\/nlink&gt;/g,
+      function (_m, inner) {
+        // <nlink> …</nlink> のタグは薄く表示したまま、全体をクリックで同名ノードへジャンプ。
+        return '<a class="nlink" contenteditable="false" data-nlink="' + inner + '" title="クリックで「' +
+          inner + '」へジャンプ"><span class="nlink-tag">&lt;nlink&gt;</span>' + inner +
+          '<span class="nlink-tag">&lt;/nlink&gt;</span></a>';
+      }
+    );
+  }
+
+  // 表示用リンク <a class="nlink"> を保存用の <nlink> タグ（エスケープ済みテキスト）へ戻す。
+  function stripNlinks(html) {
+    if (!html || html.indexOf('class="nlink"') === -1) return html;
+    var tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    var anchors = tmp.querySelectorAll('a.nlink');
+    for (var i = 0; i < anchors.length; i++) {
+      var a = anchors[i];
+      var t = a.getAttribute('data-nlink');
+      if (t == null) t = a.textContent || '';
+      a.parentNode.replaceChild(document.createTextNode('<nlink>' + t + '</nlink>'), a);
+    }
+    return tmp.innerHTML;
+  }
+
+  // 選択した文字列をノードリンクにする（元NanaTreeの「リンク文字挿入」に相当）。
+  // 選択テキスト＝ジャンプ先の見出し名。表示は青リンク、保存時は <nlink>見出し</nlink>。
+  function insertNlink() {
+    if (dom.editorContent.contentEditable !== 'true') { setStatus('本文を選択してから押してください。', true); return; }
+    dom.editorContent.focus();
+    restoreSelection();
+    var sel = window.getSelection();
+    if (!sel || !sel.rangeCount) { setStatus('リンクにする見出し名を選択してください。', true); return; }
+    var range = sel.getRangeAt(0);
+    var text = range.toString();
+    if (!text) { setStatus('リンクにする見出し名を選択してから「リンク挿入」を押してください。', true); return; }
+    if (text.indexOf('\n') !== -1) { setStatus('リンクは改行をまたげません。1行の見出し名を選択してください。', true); return; }
+    range.deleteContents();
+    var a = document.createElement('a');
+    a.className = 'nlink';
+    a.setAttribute('contenteditable', 'false');
+    a.setAttribute('data-nlink', text);
+    a.title = 'クリックで「' + text + '」へジャンプ';
+    var mkTag = function (s) { var sp = document.createElement('span'); sp.className = 'nlink-tag'; sp.textContent = s; return sp; };
+    a.appendChild(mkTag('<nlink>'));
+    a.appendChild(document.createTextNode(text));
+    a.appendChild(mkTag('</nlink>'));
+    range.insertNode(a);
+    range.setStartAfter(a); range.collapse(true);
+    sel.removeAllRanges(); sel.addRange(range);
+    saveSelectionIfInEditor();
+    commitEditorToNode(state.selectedNode);
+    var hit = findNodeByTitleDFS(state.doc.roots, text);
+    setStatus(hit ? ('リンクを作成しました（ジャンプ先: ' + text + '）') :
+      ('リンクを作成しました。※同名の見出し「' + text + '」は現在ありません（作成すればジャンプできます）。'));
+  }
+
+  // カーソル位置／選択範囲にあるリンクをふつうの文字（見出し名）に戻す。
+  function unlinkNlink() {
+    if (dom.editorContent.contentEditable !== 'true') return;
+    var all = dom.editorContent.querySelectorAll('a.nlink');
+    if (!all.length) { setStatus('この本文にリンクはありません。', true); return; }
+    var sel = window.getSelection();
+    var targets = [];
+    if (sel && sel.rangeCount) {
+      var range = sel.getRangeAt(0);
+      all.forEach(function (a) {
+        var touches = false;
+        try { touches = range.intersectsNode(a); } catch (e) { touches = false; }
+        if (touches) targets.push(a);
+      });
+      if (!targets.length) {
+        // 折りたたんだカーソル位置の直前／親にあるリンクを対象にする
+        var node = sel.anchorNode;
+        var el = node ? (node.nodeType === 1 ? node : node.parentNode) : null;
+        var a = el && el.closest ? el.closest('a.nlink') : null;
+        if (!a && el) {
+          var pv = el.previousElementSibling;
+          if (pv && pv.classList && pv.classList.contains('nlink')) a = pv;
+        }
+        if (a) targets.push(a);
+      }
+    }
+    if (!targets.length) { setStatus('解除したいリンクを選択するか、リンクの直後にカーソルを置いてから押してください。', true); return; }
+    targets.forEach(function (a) {
+      a.parentNode.replaceChild(document.createTextNode(a.getAttribute('data-nlink') || a.textContent || ''), a);
+    });
+    commitEditorToNode(state.selectedNode);
+    setStatus('リンクを解除しました（' + targets.length + '件）。');
+  }
+
+  function activateNlink(title) {
+    var target = findNodeByTitleDFS(state.doc.roots, title);
+    if (target) {
+      expandAncestors(target);
+      renderTree();
+      selectNode(target);
+      scrollNodeIntoView(target);
+      setStatus('ノードへジャンプしました: ' + title);
+    } else if (/^https?:\/\//i.test(title)) {
+      window.open(title, '_blank', 'noopener');
+    } else {
+      setStatus('リンク先のノードが見つかりません: ' + title, true);
+    }
+  }
+
+  // =====================================================================
+  // コンテキストメニュー
+  // =====================================================================
+
+  function wireContextMenu() {
+    document.addEventListener('click', function (e) {
+      if (!dom.contextMenu.contains(e.target)) closeContextMenu();
+    });
+    dom.contextMenu.querySelectorAll('button[data-action]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        closeContextMenu();
+        switch (btn.dataset.action) {
+          case 'addSibling': addSiblingNode(); break;
+          case 'addChild': addChildNode(); break;
+          case 'rename': if (state.selectedNode) startRenameForNode(state.selectedNode); break;
+          case 'moveUp': moveNodeUp(); break;
+          case 'moveDown': moveNodeDown(); break;
+          case 'outdent': outdentNode(); break;
+          case 'indent': indentNode(); break;
+          case 'delete': deleteSelectedNode(); break;
+        }
+      });
+    });
+  }
+
+  function openContextMenu(x, y) {
+    var menu = dom.contextMenu;
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+    menu.classList.add('open');
+    requestAnimationFrame(function () {
+      var rect = menu.getBoundingClientRect();
+      if (rect.right > window.innerWidth) menu.style.left = Math.max(4, window.innerWidth - rect.width - 8) + 'px';
+      if (rect.bottom > window.innerHeight) menu.style.top = Math.max(4, window.innerHeight - rect.height - 8) + 'px';
+    });
+  }
+
+  function closeContextMenu() {
+    dom.contextMenu.classList.remove('open');
+  }
+
+  // =====================================================================
+  // スプリッタ（左右ペイン幅可変）
+  // =====================================================================
+
+  function wireSplitter() {
+    var dragging = false;
+    dom.splitter.addEventListener('mousedown', function (e) {
+      dragging = true;
+      dom.splitter.classList.add('dragging');
+      e.preventDefault();
+    });
+    window.addEventListener('mousemove', function (e) {
+      if (!dragging) return;
+      var bodyRect = dom.appBody.getBoundingClientRect();
+      var w = e.clientX - bodyRect.left;
+      w = Math.max(160, Math.min(w, bodyRect.width * 0.7));
+      dom.treePane.style.width = w + 'px';
+    });
+    window.addEventListener('mouseup', function () {
+      if (!dragging) return;
+      dragging = false;
+      dom.splitter.classList.remove('dragging');
+    });
+  }
+
+  // =====================================================================
+  // ツリーツールバー / ヘッダーツールバー 配線
+  // =====================================================================
+
+  function wireTreeToolbar() {
+    dom.btnAddSibling.addEventListener('click', addSiblingNode);
+    dom.btnAddChild.addEventListener('click', addChildNode);
+    dom.btnDeleteNode.addEventListener('click', deleteSelectedNode);
+    dom.btnMoveUp.addEventListener('click', moveNodeUp);
+    dom.btnMoveDown.addEventListener('click', moveNodeDown);
+    dom.btnOutdent.addEventListener('click', outdentNode);
+    dom.btnIndent.addEventListener('click', indentNode);
+  }
+
+  function wireHeaderToolbar() {
+    dom.btnNew.addEventListener('click', function () {
+      if (state.docDirty && !window.confirm('保存されていない変更があります。破棄して新規作成しますか？')) return;
+      newDocument();
+    });
+    dom.btnOpen.addEventListener('click', function () { pendingCompactImport = false; dom.fileInput.click(); });
+    dom.fileInput.addEventListener('change', function () {
+      var f = dom.fileInput.files && dom.fileInput.files[0];
+      dom.fileInput.value = '';
+      var compact = pendingCompactImport;
+      pendingCompactImport = false;
+      if (!f) return;
+      if (compact) importNnaCompact(f);
+      else openFileObject(f);
+    });
+    dom.btnSaveNna.addEventListener('click', function () { saveDocumentAs('nna'); });
+    wireFileMenu();
+    dom.btnNavBack.addEventListener('click', function () { navGo(-1); });
+    dom.btnNavForward.addEventListener('click', function () { navGo(1); });
+    dom.btnUndo.addEventListener('click', editorUndo);
+    dom.btnRedo.addEventListener('click', editorRedo);
+    dom.btnReplaceAll.addEventListener('click', function () { doReplace('note'); });
+    dom.btnReplaceAllDoc.addEventListener('click', function () { doReplace('all'); });
+    updateNavButtons();
+  }
+
+  // 「ファイル ▾」ドロップダウン
+  function wireFileMenu() {
+    var actions = {
+      saveAsNna: function () { saveDocumentAs('nna'); },
+      saveNnz: function () { saveDocumentAs('nnz'); },
+      importCompact: function () { pendingCompactImport = true; dom.fileInput.click(); },
+      saveNwt: saveCompactNwt,
+      exportOpml: exportOpml,
+      exportTxt: exportTreeText
+    };
+    function closeMenu() { dom.fileMenu.hidden = true; }
+    dom.btnFileMenu.addEventListener('click', function (e) {
+      e.stopPropagation();
+      dom.fileMenu.hidden = !dom.fileMenu.hidden;
+    });
+    dom.fileMenu.querySelectorAll('button[data-fm]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        closeMenu();
+        var fn = actions[btn.dataset.fm];
+        if (fn) fn();
+      });
+    });
+    document.addEventListener('click', function (e) {
+      if (!dom.fileMenu.hidden && !dom.fileMenu.contains(e.target) && e.target !== dom.btnFileMenu) closeMenu();
+    });
+  }
+
+  function newDocument() {
+    state.doc = { title: '無題', roots: [] };
+    state.fileKind = null;
+    state.fileName = null;
+    state.fileHandle = null;
+    state.selectedNode = null;
+    resetNavigation();
+    dom.editorContent.innerHTML = '';
+    dom.editorContent.contentEditable = 'false';
+    dom.nodeTitleInput.value = '';
+    dom.nodeTitleInput.disabled = true;
+    renderTree();
+    markDocClean();
+    setStatus('新規文書を作成しました。');
+  }
+
+  // =====================================================================
+  // ステータスバー / ドキュメントタイトル表示
+  // =====================================================================
+
+  function setStatus(msg, isWarn) {
+    dom.statusMessage.textContent = msg;
+    dom.statusMessage.classList.toggle('warn', !!isWarn);
+  }
+
+  function markDocDirty() { state.docDirty = true; updateDocTitleDisplay(); }
+  function markDocClean() { state.docDirty = false; updateDocTitleDisplay(); }
+
+  function updateDocTitleDisplay() {
+    var title = state.doc.title || '無題';
+    dom.docTitleDisplay.textContent = title + (state.docDirty ? ' *' : '') +
+      (state.fileName ? '　[' + state.fileName + ']' : '');
+    document.title = (state.docDirty ? '*' : '') + title + ' - NanaTree Web';
+  }
+
+  // =====================================================================
+  // ファイル入出力
+  // =====================================================================
+
+  function stripExt(name) {
+    var idx = name.lastIndexOf('.');
+    return idx > 0 ? name.slice(0, idx) : name;
+  }
+
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+  function formatTimestamp(d) {
+    return '' + d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) +
+      pad2(d.getHours()) + pad2(d.getMinutes()) + pad2(d.getSeconds());
+  }
+
+  async function decompressDeflate(arrayBuffer) {
+    if (typeof DecompressionStream === 'undefined') {
+      throw new Error('このブラウザは .nnz の展開（DecompressionStream）に対応していません。');
+    }
+    var blob = new Blob([arrayBuffer]);
+    var ds = blob.stream().pipeThrough(new DecompressionStream('deflate'));
+    return await new Response(ds).arrayBuffer();
+  }
+
+  async function compressDeflate(arrayBuffer) {
+    if (typeof CompressionStream === 'undefined') {
+      throw new Error('このブラウザは .nnz の圧縮（CompressionStream）に対応していません。');
+    }
+    var blob = new Blob([arrayBuffer]);
+    var cs = blob.stream().pipeThrough(new CompressionStream('deflate'));
+    return await new Response(cs).arrayBuffer();
+  }
+
+  function loadDocument(doc, meta) {
+    state.doc = { title: (doc && doc.title) || '無題', roots: (doc && doc.roots) || [] };
+    (state.doc.roots || []).forEach(reassignIds);
+    resetNavigation();
+
+    state.fileKind = meta.kind || null;
+    state.fileName = meta.fileName || null;
+    state.fileHandle = meta.fileHandle || null;
+    state.selectedNode = null;
+
+    dom.editorContent.innerHTML = '';
+    dom.editorContent.contentEditable = 'false';
+    dom.nodeTitleInput.value = '';
+    dom.nodeTitleInput.disabled = true;
+
+    renderTree();
+
+    var focused = findFocusedNode(state.doc.roots);
+    var first = focused || state.doc.roots[0] || null;
+    if (first) {
+      expandAncestors(first);
+      renderTree();
+      selectNode(first);
+      scrollNodeIntoView(first);
+    }
+
+    updateDocTitleDisplay();
+    markDocClean();
+  }
+
+  async function openFileObject(file) {
+    var name = file.name || 'ファイル';
+    var ext = (name.split('.').pop() || '').toLowerCase();
+    try {
+      if (ext === 'nna' || ext === 'nnz') {
+        if (!hasNanaRTF()) {
+          setStatus('.nna/.nnz を開くには rtf.js が必要です（読み込まれていません）。', true);
+          return;
+        }
+        var buf = await file.arrayBuffer();
+        if (ext === 'nnz') buf = await decompressDeflate(buf);
+        var bytes = new Uint8Array(buf);
+        var text = window.NanaRTF.decodeCP932(bytes);
+        var parsed = parseNna(text);
+        loadDocument({ title: stripExt(name), roots: parsed.roots }, { kind: ext, fileName: name });
+        setStatus('読み込みました: ' + name);
+      } else if (ext === 'opml' || ext === 'xml') {
+        var xmlText = await file.text();
+        var opmlDoc = parseOpml(xmlText);
+        loadDocument({ title: opmlDoc.title || stripExt(name), roots: opmlDoc.roots }, { kind: 'opml', fileName: name });
+        setStatus('読み込みました: ' + name);
+      } else if (ext === 'nwt') {
+        // コンパクト取り込み形式（tools/import_nna_compact.py が生成）。
+        // 画像はPNG data URIで各ノードのhtmlに埋め込み済み。rtf.js 不要。
+        var cjson = JSON.parse(await file.text());
+        loadDocument({ title: cjson.title || stripExt(name), roots: compactToModel(cjson.roots || []) },
+          { kind: 'nwt', fileName: name });
+        setStatus('取り込みました（コンパクト形式）: ' + name);
+      } else if (ext === 'txt') {
+        // 階層化テキスト（NanaTree互換）。UTF-8とCP932の両方を受け付ける
+        var tbuf = await file.arrayBuffer();
+        var tbytes = new Uint8Array(tbuf);
+        var ttext;
+        try {
+          ttext = new TextDecoder('utf-8', { fatal: true }).decode(tbytes);
+        } catch (_e) {
+          ttext = new TextDecoder('shift_jis').decode(tbytes);
+        }
+        if (ttext.charCodeAt(0) === 0xFEFF) ttext = ttext.slice(1);
+        var troots = treeTextToModel(ttext);
+        loadDocument({ title: stripExt(name), roots: troots }, { kind: 'txt', fileName: name });
+        setStatus('階層化テキストとして読み込みました: ' + name);
+      } else {
+        var sniffText = await file.text();
+        if (/^\s*<\?xml/.test(sniffText) || /<opml[\s>]/i.test(sniffText)) {
+          var od = parseOpml(sniffText);
+          loadDocument({ title: od.title || stripExt(name), roots: od.roots }, { kind: 'opml', fileName: name });
+          setStatus('OPMLとして読み込みました: ' + name);
+        } else if (/"format"\s*:\s*"nanatree-web-compact"/.test(sniffText)) {
+          var cj = JSON.parse(sniffText);
+          loadDocument({ title: cj.title || stripExt(name), roots: compactToModel(cj.roots || []) }, { kind: 'nwt', fileName: name });
+          setStatus('取り込みました（コンパクト形式）: ' + name);
+        } else if (hasNanaRTF()) {
+          var nd = parseNna(sniffText);
+          loadDocument({ title: stripExt(name), roots: nd.roots }, { kind: 'nna', fileName: name });
+          setStatus('.nna形式として読み込みました: ' + name);
+        } else {
+          setStatus('不明な形式のファイルです（拡張子: ' + (ext || 'なし') + '）。', true);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      setStatus('ファイルを開けませんでした: ' + (err && err.message ? err.message : err), true);
+    }
+  }
+
+  // 巨大.nna/.nnz をブラウザ内でコンパクト形式に変換して取り込む（Python不要、nnaimport.js）。
+  async function importNnaCompact(file) {
+    if (!window.NanaImport) { setStatus('取り込みモジュール（nnaimport.js）が読み込まれていません。', true); return; }
+    if (!hasNanaRTF()) { setStatus('.nna の取り込みには rtf.js が必要です。', true); return; }
+    var name = file.name || 'ファイル';
+    var ext = (name.split('.').pop() || '').toLowerCase();
+    try {
+      setStatus('読み込み中… ' + name);
+      var buf = await file.arrayBuffer();
+      if (ext === 'nnz') buf = await decompressDeflate(buf);
+      var text = window.NanaRTF.decodeCP932(new Uint8Array(buf));
+      // 変換中はUIをブロックしないよう await が随所で入る（画像デコードごとにyield）
+      var compact = await window.NanaImport.convertNnaToCompact(text, stripExt(name), function (done, total) {
+        setStatus('画像を変換中… ' + done + ' / ' + total + ' ノード');
+      });
+      loadDocument({ title: compact.title, roots: compactToModel(compact.roots) }, { kind: 'nwt', fileName: stripExt(name) + '.nwt' });
+      setStatus('軽量取り込み完了: ' + name + '（「.nwt保存」で次回から高速に開けます）');
+    } catch (err) {
+      console.error(err);
+      setStatus('取り込みに失敗しました: ' + (err && err.message ? err.message : err), true);
+    }
+  }
+
+  // 現在の文書をコンパクト形式(.nwt)として保存する。
+  async function saveCompactNwt() {
+    commitEditorToNode(state.selectedNode);
+    var unresolved = ensureAllHtmlResolved();
+    if (unresolved > 0) {
+      setStatus('rtf.js が無いため本文を変換できないノードがあります（' + unresolved + '件、空文字で出力）。', true);
+    }
+    function walk(nodes) {
+      return (nodes || []).map(function (n) {
+        return { title: n.title, html: n.html || '', children: walk(n.children) };
+      });
+    }
+    var doc = { format: 'nanatree-web-compact', version: 1, title: state.doc.title || '無題', roots: walk(state.doc.roots) };
+    var bytes = new TextEncoder().encode(JSON.stringify(doc));
+    var suggestedName = (state.doc.title || '無題') + '.nwt';
+    var ok = await saveBytesToFile(bytes, suggestedName, 'application/json');
+    if (ok) setStatus('コンパクト保存しました: ' + suggestedName);
+  }
+
+  // コンパクト取り込み形式(.nwt)のノード配列 -> アプリのデータモデル。
+  // htmlは変換済み（画像はPNG data URI埋め込み）なのでRTFは持たない。
+  function compactToModel(list) {
+    return list.map(function (c) {
+      var node = window.NanaCore.createNode(c.title || '');
+      node.html = c.html || '';
+      node.rtf = null;      // 元RTFなし。.nna保存時は html から生成される（非可逆レーン）
+      node.dirty = false;   // 取り込み直後は未編集
+      node.children = compactToModel(c.children || []);
+      node.expanded = node.children.length > 0;
+      return node;
+    });
+  }
+
+  function regenerateDirtyRtf() {
+    var unresolvedCount = 0;
+    walkTree(state.doc.roots, function (node) {
+      if (node.dirty && node.html !== null) {
+        if (hasNanaRTF()) {
+          try {
+            node.rtf = window.NanaRTF.htmlToRtf(node.html);
+            node.dirty = false;
+          } catch (err) {
+            console.error(err);
+            unresolvedCount++;
+          }
+        } else {
+          unresolvedCount++;
+        }
+      }
+    });
+    return unresolvedCount;
+  }
+
+  async function saveBytesToFile(bytes, suggestedName, mime) {
+    if (window.showSaveFilePicker) {
+      try {
+        var ext = suggestedName.split('.').pop();
+        var accept = {};
+        accept[mime || 'application/octet-stream'] = ['.' + ext];
+        var handle = await window.showSaveFilePicker({
+          suggestedName: suggestedName,
+          types: [{ description: 'NanaTree Web file', accept: accept }]
+        });
+        var writable = await handle.createWritable();
+        await writable.write(bytes);
+        await writable.close();
+        state.fileHandle = handle;
+        return true;
+      } catch (err) {
+        if (err && err.name === 'AbortError') {
+          setStatus('保存をキャンセルしました。');
+          return false;
+        }
+        console.warn('showSaveFilePicker failed, falling back to download:', err);
+        // フォールスルーしてBlobダウンロードを試みる
+      }
+    }
+    var blob = new Blob([bytes], { type: mime || 'application/octet-stream' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = suggestedName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+    return true;
+  }
+
+  async function saveDocumentAs(kind) {
+    if (!hasNanaRTF()) {
+      setStatus('.nna/.nnz を保存するには rtf.js が必要です（読み込まれていません）。', true);
+      return;
+    }
+    commitEditorToNode(state.selectedNode);
+    var unresolved = regenerateDirtyRtf();
+    if (unresolved > 0) {
+      setStatus('一部ノードの本文変換に失敗したため、元の本文のまま保存します（' + unresolved + '件）。', true);
+    }
+
+    var text = serializeNna(state.doc);
+    var bytes;
+    try {
+      bytes = window.NanaRTF.encodeCP932(text);
+    } catch (err) {
+      setStatus('CP932への変換に失敗しました: ' + (err && err.message ? err.message : err), true);
+      return;
+    }
+
+    var outBytes = bytes;
+    if (kind === 'nnz') {
+      try {
+        var arrBuf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+        var compressed = await compressDeflate(arrBuf);
+        outBytes = new Uint8Array(compressed);
+      } catch (err) {
+        setStatus('圧縮に失敗しました: ' + (err && err.message ? err.message : err), true);
+        return;
+      }
+    }
+
+    var suggestedName = (state.fileName ? stripExt(state.fileName) : (state.doc.title || '無題')) + '.' + kind;
+    var ok = await saveBytesToFile(outBytes, suggestedName, 'application/octet-stream');
+    if (ok) {
+      state.fileName = suggestedName;
+      state.fileKind = kind;
+      markDocClean();
+      setStatus('保存しました: ' + suggestedName);
+    }
+  }
+
+  function ensureAllHtmlResolved() {
+    var unresolved = 0;
+    walkTree(state.doc.roots, function (node) {
+      if (node.html === null) {
+        if (node.rtf && hasNanaRTF()) {
+          try { node.html = window.NanaRTF.rtfToHtml(node.rtf); }
+          catch (e) { node.html = ''; unresolved++; }
+        } else {
+          node.html = '';
+          if (node.rtf) unresolved++;
+        }
+      }
+    });
+    return unresolved;
+  }
+
+  async function exportOpml() {
+    commitEditorToNode(state.selectedNode);
+    var unresolved = ensureAllHtmlResolved();
+    if (unresolved > 0) {
+      setStatus('rtf.js が無いため本文を変換できないノードがあります（' + unresolved + '件、空文字で出力）。', true);
+    }
+    var text = buildOpml(state.doc);
+    var stamp = formatTimestamp(new Date());
+    var suggestedName = (state.doc.title || '無題') + '_' + stamp + '.xml';
+    var bytes = new TextEncoder().encode(text);
+    var ok = await saveBytesToFile(bytes, suggestedName, 'application/xml');
+    if (ok) setStatus('OPMLを書き出しました: ' + suggestedName);
+  }
+
+  // =====================================================================
+  // 階層化テキスト（NanaTree互換、treetext.js）
+  // =====================================================================
+
+  function treeTextToModel(text) {
+    var parsed = window.NanaTreeText.parseTreeText(text);
+    function toNode(t) {
+      var node = window.NanaCore.createNode(t.title);
+      node.html = t.bodyText ? window.NanaCore.noteTextToHtml(t.bodyText) : '';
+      node.rtf = null;   // 元RTFなし。.nna保存時は html から生成する
+      node.dirty = true;
+      node.children = (t.children || []).map(toNode);
+      node.expanded = node.children.length > 0;
+      return node;
+    }
+    return parsed.map(toNode);
+  }
+
+  async function exportTreeText() {
+    if (!window.NanaTreeText) {
+      setStatus('treetext.js が読み込まれていません。', true);
+      return;
+    }
+    commitEditorToNode(state.selectedNode);
+    var unresolved = ensureAllHtmlResolved();
+    if (unresolved > 0) {
+      setStatus('rtf.js が無いため本文を変換できないノードがあります（' + unresolved + '件、空文字で出力）。', true);
+    }
+    function toPlain(node) {
+      return {
+        title: node.title,
+        bodyText: window.NanaCore.htmlToPlainText(node.html || ''),
+        children: (node.children || []).map(toPlain)
+      };
+    }
+    var text = window.NanaTreeText.buildTreeText((state.doc.roots || []).map(toPlain));
+    // NanaTree/NanaTerry が読める CP932 で出力（rtf.js 不在時のみ UTF-8）
+    var bytes = hasNanaRTF() ? window.NanaRTF.encodeCP932(text) : new TextEncoder().encode(text);
+    var suggestedName = (state.doc.title || '無題') + '.txt';
+    var ok = await saveBytesToFile(bytes, suggestedName, 'text/plain');
+    if (ok) setStatus('階層化テキストを書き出しました: ' + suggestedName);
+  }
+
+  // =====================================================================
+  // ドラッグ&ドロップ（ウィンドウへファイルをドロップして開く）
+  // =====================================================================
+
+  function wireFileDrop() {
+    function hasFiles(e) {
+      return e.dataTransfer && e.dataTransfer.types && Array.prototype.indexOf.call(e.dataTransfer.types, 'Files') !== -1;
+    }
+    window.addEventListener('dragover', function (e) {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      dom.dndOverlay.classList.add('active');
+    });
+    window.addEventListener('dragleave', function (e) {
+      if (e.clientX <= 0 || e.clientY <= 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight) {
+        dom.dndOverlay.classList.remove('active');
+      }
+    });
+    window.addEventListener('drop', function (e) {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      dom.dndOverlay.classList.remove('active');
+      var files = e.dataTransfer.files;
+      if (files && files.length) openFileObject(files[0]);
+    });
+  }
+
+  // =====================================================================
+  // 自動保存（localStorage）
+  // =====================================================================
+
+  function scheduleAutosave() {
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(doAutosave, 1500);
+  }
+
+  // doc全体のおおよその文字数（rtf+html+title）。lengthを足すだけなので巨大文書でも軽い。
+  function estimateDocChars() {
+    var total = 0;
+    walkTree(state.doc.roots, function (n) {
+      if (n.rtf) total += n.rtf.length;
+      if (n.html) total += n.html.length;
+      if (n.title) total += n.title.length;
+    });
+    return total;
+  }
+
+  function doAutosave() {
+    // 巨大文書ではdoc全体のJSON.stringifyがGB級メモリと数秒のUIフリーズを招き、しかも
+    // localStorage(約5MB)には入りきらず必ず失敗する。事前にサイズを見積もって自動保存を
+    // スキップする（手動保存は使える）。小さい文書を開き直せば自動的に再開する。
+    if (estimateDocChars() > 2000000) {
+      if (dom.autosaveStatus) {
+        dom.autosaveStatus.textContent = '自動保存: 無効（文書が大きいため。手動保存をお使いください）';
+      }
+      return;
+    }
+    try {
+      var payload = JSON.stringify({
+        savedAt: Date.now(),
+        fileKind: state.fileKind,
+        fileName: state.fileName,
+        doc: state.doc
+      });
+      localStorage.setItem(AUTOSAVE_KEY, payload);
+      if (dom.autosaveStatus) {
+        dom.autosaveStatus.textContent = '自動保存: ' + new Date().toLocaleTimeString('ja-JP');
+      }
+    } catch (err) {
+      setStatus('自動保存に失敗しました（ストレージ容量不足の可能性があります）: ' + (err && err.message ? err.message : err), true);
+    }
+  }
+
+  function checkAutosaveOnStartup() {
+    var raw = null;
+    try { raw = localStorage.getItem(AUTOSAVE_KEY); } catch (err) { /* 無視 */ }
+    if (!raw) return;
+    dom.autosaveBanner.hidden = false;
+
+    dom.btnAutosaveRestore.onclick = function () {
+      try {
+        var data = JSON.parse(raw);
+        if (data && data.doc) {
+          loadDocument(data.doc, { kind: data.fileKind, fileName: data.fileName });
+          markDocDirty(); // 復元直後は未保存扱いにしておく（元ファイルへは未反映のため）
+          setStatus('自動保存データを復元しました。');
+        }
+      } catch (err) {
+        setStatus('自動保存データの復元に失敗しました: ' + (err && err.message ? err.message : err), true);
+      }
+      dom.autosaveBanner.hidden = true;
+    };
+    dom.btnAutosaveDiscard.onclick = function () {
+      try { localStorage.removeItem(AUTOSAVE_KEY); } catch (err) { /* 無視 */ }
+      dom.autosaveBanner.hidden = true;
+    };
+  }
+
+  // =====================================================================
+  // 検索
+  // =====================================================================
+
+  function wireSearch() {
+    dom.searchInput.addEventListener('input', function () {
+      runSearch(dom.searchInput.value);
+    });
+    dom.searchInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); searchNext(); }
+    });
+    dom.btnSearchNext.addEventListener('click', searchNext);
+  }
+
+  function runSearch(query) {
+    query = (query || '').trim();
+    searchMatches = [];
+    searchIndex = -1;
+    if (!query) { updateSearchCount(); return; }
+    walkTree(state.doc.roots, function (node) {
+      var titleMatch = node.title && node.title.indexOf(query) !== -1;
+      var bodyMatch = false;
+      if (!titleMatch && node.html) {
+        bodyMatch = htmlToPlainText(node.html).indexOf(query) !== -1;
+      }
+      if (titleMatch || bodyMatch) searchMatches.push(node);
+    });
+    updateSearchCount();
+  }
+
+  function updateSearchCount() {
+    if (!dom.searchCount) return;
+    if (!searchMatches.length) { dom.searchCount.textContent = dom.searchInput.value ? '0件' : ''; return; }
+    dom.searchCount.textContent = (searchIndex + 1) + ' / ' + searchMatches.length;
+  }
+
+  function searchNext() {
+    // 削除・新規作成・ファイル切替で木が変わると、searchMatches が現在の木から
+    // 外れたノードを指し続ける。そのまま選択→編集すると切り離されたノードに
+    // 書き込まれ内容が失われる。候補が現在の木に残っているか検証し、外れていれば
+    // 検索し直す。
+    if (searchMatches.length) {
+      var present = new Set();
+      walkTree(state.doc.roots, function (n) { present.add(n); });
+      if (!searchMatches.every(function (n) { return present.has(n); })) {
+        searchMatches = [];
+        searchIndex = -1;
+      }
+    }
+    if (!searchMatches.length) {
+      runSearch(dom.searchInput.value);
+      if (!searchMatches.length) { setStatus('見つかりませんでした（本文検索は開いたことのあるノードのみ対象です）。', true); return; }
+    }
+    searchIndex = (searchIndex + 1) % searchMatches.length;
+    var node = searchMatches[searchIndex];
+    expandAncestors(node);
+    renderTree();
+    selectNode(node);
+    scrollNodeIntoView(node);
+    updateSearchCount();
+  }
+
+  // =====================================================================
+  // キーボードショートカット
+  // =====================================================================
+
+  function wireKeyboardShortcuts() {
+    document.addEventListener('keydown', function (e) {
+      var ctrl = e.ctrlKey || e.metaKey;
+      if (ctrl && e.key.toLowerCase() === 'o') {
+        e.preventDefault();
+        dom.fileInput.click();
+      } else if (ctrl && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        saveDocumentAs('nna');
+      } else if (e.altKey && e.key === 'ArrowLeft') {
+        e.preventDefault();
+        navGo(-1);
+      } else if (e.altKey && e.key === 'ArrowRight') {
+        e.preventDefault();
+        navGo(1);
+      } else if (ctrl && !e.shiftKey && e.key.toLowerCase() === 'y') {
+        // Ctrl+Y = やり直し（Ctrl+Zはエディタ標準のundoに任せる）
+        if (document.activeElement === dom.editorContent) { e.preventDefault(); editorRedo(); }
+      } else if (ctrl && e.shiftKey && e.key.toLowerCase() === 'z') {
+        if (document.activeElement === dom.editorContent) { e.preventDefault(); editorRedo(); }
+      } else if (e.key === 'F2') {
+        if (state.selectedNode &&
+            document.activeElement !== dom.editorContent &&
+            document.activeElement !== dom.nodeTitleInput) {
+          e.preventDefault();
+          startRenameForNode(state.selectedNode);
+        }
+      }
+    });
+  }
+
+})();
+
+</script>
+</body>
+</html>
