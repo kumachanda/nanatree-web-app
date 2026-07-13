@@ -15,6 +15,7 @@
   --border-strong: #c2c7cf;
   --text: #202225;
   --text-muted: #6b7280;
+  --text-disabled: #aab2bd;
   --accent: #2f6feb;
   --accent-weak: #e8f0fe;
   --danger: #d1373f;
@@ -25,7 +26,71 @@
   --hover-bg: #eef1f5;
   --shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
   --radius: 6px;
+
+  /* メニューバー・ドロップダウン */
+  --menubar-bg: #f3f4f6;
+  --menu-hover-bg: #dfe6ef;
+  --menu-list-bg: #ffffff;
+  --menu-list-border: #cfd6df;
+  --menu-sep: #e2e6ea;
+
+  /* ノードリンク（<nlink>） */
+  --link-color: #1558d6;
+  --link-hover-color: #0b3aa0;
+  --link-hover-bg: rgba(21, 88, 214, 0.08);
+  --nlink-tag-color: #9aa4b2;
+
+  /* ツールバー・エディタ背景 */
+  --toolbar-bg: #fafbfc;
+  --editor-scroll-bg: #fbfbfc;
+
+  /* エラーバナー */
+  --error-bg: #fdecec;
+  --error-text: #7a1512;
+  --error-border: #f2b8b5;
+
+  color-scheme: light;
   font-size: 14px;
+}
+
+/* ===================== ダークテーマ ===================== */
+:root[data-theme="dark"] {
+  --bg: #1c1f24;
+  --panel-bg: #24282f;
+  --border: #3a3f47;
+  --border-strong: #4a505a;
+  --text: #e4e6eb;
+  --text-muted: #9aa1ab;
+  --text-disabled: #5a6068;
+  --accent: #5b9dff;
+  --accent-weak: #24344d;
+  --danger: #ff6b6b;
+  --warn-bg: #3a331a;
+  --warn-border: #6b5a20;
+  --warn-text: #e8c766;
+  --selected-bg: #2c3e5c;
+  --hover-bg: #30343c;
+  --shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+
+  --menubar-bg: #21242a;
+  --menu-hover-bg: #323841;
+  --menu-list-bg: #24282f;
+  --menu-list-border: #3a3f47;
+  --menu-sep: #3a3f47;
+
+  --link-color: #7db2ff;
+  --link-hover-color: #a8ccff;
+  --link-hover-bg: rgba(125, 178, 255, 0.14);
+  --nlink-tag-color: #7c8592;
+
+  --toolbar-bg: #21242a;
+  --editor-scroll-bg: #1a1d22;
+
+  --error-bg: #3a2020;
+  --error-text: #ff9b93;
+  --error-border: #7a3530;
+
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -173,14 +238,14 @@ input[type="color"] {
 
 /* 本文中の <nlink> ノードリンク（クリックで同名ノードへジャンプ） */
 .editor-content a.nlink {
-  color: #1558d6;
+  color: var(--link-color);
   text-decoration: underline;
   cursor: pointer;
 }
-.editor-content a.nlink:hover { color: #0b3aa0; background: rgba(21, 88, 214, 0.08); }
+.editor-content a.nlink:hover { color: var(--link-hover-color); background: var(--link-hover-bg); }
 /* <nlink> …</nlink> のタグ部分は薄く小さく表示（存在は見えるが目立たない） */
 .editor-content a.nlink .nlink-tag {
-  color: #9aa4b2;
+  color: var(--nlink-tag-color);
   font-size: 0.82em;
   text-decoration: none;
 }
@@ -218,19 +283,19 @@ input[type="color"] {
 .btn-sym { font-size: 16px; line-height: 1; min-width: 30px; }
 
 /* 本家NanaTree風メニューバー */
-.menubar { display: flex; align-items: stretch; background: #f3f4f6; border-bottom: 1px solid var(--border, #d7dbe0); font-size: 13px; }
+.menubar { display: flex; align-items: stretch; background: var(--menubar-bg); border-bottom: 1px solid var(--border, #d7dbe0); font-size: 13px; }
 .menu { position: relative; }
 .menu-label { border: none; background: transparent; padding: 4px 11px; cursor: pointer; font-size: 13px; color: inherit; }
-.menu-label:hover, .menu.open .menu-label { background: #dfe6ef; }
+.menu-label:hover, .menu.open .menu-label { background: var(--menu-hover-bg); }
 .menu-list { display: none; position: absolute; top: 100%; left: 0; z-index: 200; min-width: 230px;
-  background: #fff; border: 1px solid #cfd6df; box-shadow: 0 6px 20px rgba(0,0,0,.16); border-radius: 0 0 6px 6px; padding: 4px; }
+  background: var(--menu-list-bg); border: 1px solid var(--menu-list-border); box-shadow: 0 6px 20px rgba(0,0,0,.16); border-radius: 0 0 6px 6px; padding: 4px; }
 .menu.open .menu-list { display: block; }
 .menu-item { display: flex; justify-content: space-between; gap: 24px; width: 100%; text-align: left;
   border: none; background: transparent; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; white-space: nowrap; color: inherit; }
 .menu-item:hover:not(:disabled) { background: var(--selected-bg, #e8f0fe); }
-.menu-item:disabled { color: #aab2bd; cursor: default; }
-.menu-item .mi-key { color: #8a94a2; font-size: 12px; }
-.menu-list .menu-sep { height: 1px; background: #e2e6ea; margin: 4px 2px; }
+.menu-item:disabled { color: var(--text-disabled); cursor: default; }
+.menu-item .mi-key { color: var(--text-muted); font-size: 12px; }
+.menu-list .menu-sep { height: 1px; background: var(--menu-sep); margin: 4px 2px; }
 
 /* アイコンだけのボタンは余白を詰める */
 button > .btn-ico:only-child { margin-right: 0; }
@@ -358,7 +423,7 @@ button > .btn-ico:only-child { margin-right: 0; }
   padding: 6px 10px;
   border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
-  background: #fafbfc;
+  background: var(--toolbar-bg);
 }
 .editor-toolbar button { padding: 4px 8px; font-size: 13px; min-width: 28px; justify-content: center; }
 .editor-toolbar select { padding: 4px; }
@@ -367,7 +432,7 @@ button > .btn-ico:only-child { margin-right: 0; }
   flex: 1 1 auto;
   overflow: auto;
   min-height: 0;
-  background: #fbfbfc;
+  background: var(--editor-scroll-bg);
 }
 
 .editor-content {
@@ -376,6 +441,7 @@ button > .btn-ico:only-child { margin-right: 0; }
   margin: 0 auto;
   padding: 24px 32px;
   background: var(--panel-bg);
+  color: var(--text);
   outline: none;
   font-size: 14px;
   line-height: 1.7;
@@ -410,9 +476,9 @@ button > .btn-ico:only-child { margin-right: 0; }
   gap: 10px;
 }
 .banner.banner-error {
-  background: #fdecec;
-  color: #7a1512;
-  border-bottom: 1px solid #f2b8b5;
+  background: var(--error-bg);
+  color: var(--error-text);
+  border-bottom: 1px solid var(--error-border);
 }
 .banner.banner-info {
   background: var(--warn-bg);
@@ -495,6 +561,8 @@ button > .btn-ico:only-child { margin-right: 0; }
 .modal-box h3 { margin: 0 0 12px; font-size: 14px; }
 .modal-field { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; font-size: 13px; }
 .modal-field input[type="number"] { width: 80px; }
+.modal-radio-group { display: flex; gap: 12px; }
+.modal-radio-group label { display: flex; align-items: center; gap: 4px; font-weight: normal; cursor: pointer; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 
 /* ===================== ドラッグ&ドロップ オーバーレイ ===================== */
@@ -737,6 +805,46 @@ button > .btn-ico:only-child { margin-right: 0; }
       <div class="modal-actions">
         <button id="btnTableCancel" type="button">キャンセル</button>
         <button id="btnTableOk" type="button">挿入</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 設定ダイアログ -->
+  <div class="modal-overlay" id="settingsDialog" hidden>
+    <div class="modal-box">
+      <h3>設定</h3>
+      <div class="modal-field">
+        <span>テーマ</span>
+        <span class="modal-radio-group">
+          <label><input type="radio" name="settingsTheme" id="settingsThemeLight" value="light"> ライト</label>
+          <label><input type="radio" name="settingsTheme" id="settingsThemeDark" value="dark"> ダーク</label>
+        </span>
+      </div>
+      <label class="modal-field">削除時に確認する
+        <input type="checkbox" id="settingsConfirmDelete">
+      </label>
+      <label class="modal-field">自動保存する
+        <input type="checkbox" id="settingsAutosave">
+      </label>
+      <label class="modal-field">既定フォント
+        <select id="settingsDefaultFont">
+          <option value="">既定</option>
+          <option value="ＭＳ Ｐゴシック">ＭＳ Ｐゴシック</option>
+          <option value="ＭＳ Ｐ明朝">ＭＳ Ｐ明朝</option>
+          <option value="游ゴシック">游ゴシック</option>
+          <option value="游明朝">游明朝</option>
+          <option value="メイリオ">メイリオ</option>
+          <option value="Meiryo">Meiryo</option>
+          <option value="MS Gothic">MS Gothic</option>
+          <option value="MS Mincho">MS Mincho</option>
+          <option value="sans-serif">sans-serif</option>
+          <option value="serif">serif</option>
+          <option value="monospace">monospace</option>
+        </select>
+      </label>
+      <div class="modal-actions">
+        <button id="btnSettingsCancel" type="button">キャンセル</button>
+        <button id="btnSettingsOk" type="button">OK</button>
       </div>
     </div>
   </div>
@@ -1323,6 +1431,9 @@ button > .btn-ico:only-child { margin-right: 0; }
  *   - 表は \trowd\trgaph...\cellxN...\pard\intbl <text>\cell ... \cell\row の繰り返し。
  *   - 画像は {\pict\wmetafile8...<hex>}、OLEオブジェクトは
  *     {\object\objemb{\*\objclass ...}...{\*\objdata <hex>}{\result{\pict...<hex>}}}。
+ *     （Web版で挿入した画像は \pngblip / \jpegblip として書き出され、rtfToHtmlで
+ *      <img data-uri> に復元される。旧NanaTree由来の \wmetafile 等は従来どおり
+ *      ブラウザで描画できないため [画像] プレースホルダのまま。）
  *   - 本文中に <nlink>...</nlink> というリテラルタグが素の文字列として出現する
  *     （ノードへのリンク機能。エスケープ不要、そのままHTMLエスケープして素通しする）。
  */
@@ -1658,6 +1769,111 @@ button > .btn-ico:only-child { margin-right: 0; }
   }
 
   // =====================================================================
+  // 4b. rtfToHtml: \pict（画像）パーサ
+  // =====================================================================
+
+  var PICT_PLACEHOLDER_HTML = '<span class="nna-pict" data-skipped="1">[画像]</span>'; // [画像]
+
+  // ブラウザで直接デコードできないビットマップ形式（旧NanaTree/RichEdit由来）。
+  // これらは従来どおりプレースホルダのままにする。
+  var UNSUPPORTED_BLIP_WORDS = { wmetafile: 1, emfblip: 1, dibitmap: 1, wbitmap: 1 };
+
+  function hexCharToNibble(code) {
+    if (code >= 48 && code <= 57) return code - 48;        // '0'-'9'
+    if (code >= 97 && code <= 102) return code - 87;        // 'a'-'f'
+    if (code >= 65 && code <= 70) return code - 55;         // 'A'-'F'
+    return -1;
+  }
+
+  /** 16進文字列(奇数末尾は切り捨て) -> Uint8Array。巨大データでも1パスで変換する。 */
+  function hexStringToBytes(hexStr) {
+    var len = hexStr.length >> 1;
+    var bytes = new Uint8Array(len);
+    var w = 0;
+    for (var i = 0; i < len; i++) {
+      var hi = hexCharToNibble(hexStr.charCodeAt(i * 2));
+      var lo = hexCharToNibble(hexStr.charCodeAt(i * 2 + 1));
+      if (hi < 0 || lo < 0) continue; // 不正な文字はスキップ（防御的）
+      bytes[w++] = (hi << 4) | lo;
+    }
+    return w === bytes.length ? bytes : bytes.subarray(0, w);
+  }
+
+  /** Uint8Array -> base64文字列。stack overflow回避のためチャンク分割してString.fromCharCode.applyする。 */
+  function bytesToBase64(bytes) {
+    var CHUNK = 0x8000;
+    var chunks = [];
+    for (var i = 0; i < bytes.length; i += CHUNK) {
+      var sub = bytes.subarray(i, Math.min(i + CHUNK, bytes.length));
+      chunks.push(String.fromCharCode.apply(null, sub));
+    }
+    return global.btoa(chunks.join(''));
+  }
+
+  /**
+   * {\pict ...} グループ（openPosは'{'の位置）を解析する。
+   * \pngblip / \jpegblip なら実データを<img data-uri>に変換し、
+   * \wmetafile 等（旧NanaTree由来。ブラウザ非対応）や種別不明なものはプレースホルダにする。
+   * 種別が判明した時点で以後の判定を打ち切るため、巨大な\wmetafileデータを
+   * 全走査することはない（findGroupEndで求めたendまでジャンプするだけ）。
+   */
+  function parsePictGroup(rtf, openPos) {
+    var end = findGroupEnd(rtf, openPos);
+    var pos = openPos + 1;
+    var depth = 1;
+    var blipType = null; // 'png' | 'jpeg' | 'unsupported' | null
+    var hexParts = [];
+
+    while (pos < end) {
+      var t = nextToken(rtf, pos);
+      if (t.type === 'open') { depth++; pos = t.end; continue; }
+      if (t.type === 'close') {
+        depth--; pos = t.end;
+        if (depth <= 0) break;
+        continue;
+      }
+      if (t.type === 'ctrlword') {
+        if (blipType == null) {
+          if (t.name === 'pngblip') blipType = 'png';
+          else if (t.name === 'jpegblip') blipType = 'jpeg';
+          else if (UNSUPPORTED_BLIP_WORDS.hasOwnProperty(t.name)) blipType = 'unsupported';
+        }
+        if (blipType === 'unsupported') {
+          return { html: PICT_PLACEHOLDER_HTML, end: end }; // 以後は読み飛ばして終了
+        }
+        pos = t.end;
+        continue;
+      }
+      if (t.type === 'hex') {
+        if (blipType === 'png' || blipType === 'jpeg') hexParts.push(hex2(t.byte));
+        pos = t.end;
+        continue;
+      }
+      if (t.type === 'text') {
+        if (blipType === 'png' || blipType === 'jpeg') hexParts.push(t.text);
+        pos = t.end;
+        continue;
+      }
+      pos = t.end; // ctrlsym等は無視
+    }
+
+    if (blipType === 'png' || blipType === 'jpeg') {
+      var hexStr = hexParts.join('').replace(/[^0-9a-fA-F]/g, '');
+      if (hexStr.length >= 2) {
+        try {
+          var bytes = hexStringToBytes(hexStr);
+          if (bytes.length > 0) {
+            var mime = blipType === 'png' ? 'image/png' : 'image/jpeg';
+            var b64 = bytesToBase64(bytes);
+            return { html: '<img src="data:' + mime + ';base64,' + b64 + '">', end: end };
+          }
+        } catch (e) { /* 変換失敗時はプレースホルダにフォールバック */ }
+      }
+    }
+    return { html: PICT_PLACEHOLDER_HTML, end: end };
+  }
+
+  // =====================================================================
   // 5. rtfToHtml: 本体
   // =====================================================================
 
@@ -1838,8 +2054,9 @@ button > .btn-ico:only-child { margin-right: 0; }
           pos = findGroupEnd(rtf, pos); continue;
         }
         if (peek.type === 'ctrlword' && peek.name === 'pict') {
-          pos = findGroupEnd(rtf, pos);
-          pushRaw('<span class="nna-pict" data-skipped="1">[画像]</span>'); // [画像]
+          var pictResult = parsePictGroup(rtf, pos);
+          pos = pictResult.end;
+          pushRaw(pictResult.html);
           continue;
         }
         if (peek.type === 'ctrlword' && peek.name === 'object') {
@@ -2074,6 +2291,105 @@ button > .btn-ico:only-child { margin-right: 0; }
   }
 
   // =====================================================================
+  // 6b. htmlToRtf: <img data-uri> -> \pict 変換
+  // =====================================================================
+
+  /** data:<mime>[;base64],<data> を{mime, base64}に分解する。base64以外(URLエンコード等)はnull。 */
+  function parseDataUriImage(src) {
+    if (!src) return null;
+    var s = String(src);
+    var commaIdx = s.indexOf(',');
+    if (commaIdx === -1) return null;
+    var header = s.slice(0, commaIdx);
+    if (!/^data:/i.test(header)) return null;
+    if (!/;base64$/i.test(header)) return null; // base64以外(平文URLエンコード)は非対応
+    var mimeMatch = /^data:([^;]*)/i.exec(header);
+    var mime = mimeMatch ? mimeMatch[1].toLowerCase() : '';
+    return { mime: mime, base64: s.slice(commaIdx + 1) };
+  }
+
+  /** base64文字列 -> Uint8Array（ブラウザ標準のatobを使用。file://でも動作する）。 */
+  function base64ToBytes(b64) {
+    var clean = String(b64).replace(/\s/g, '');
+    var binary = global.atob(clean);
+    var len = binary.length;
+    var bytes = new Uint8Array(len);
+    for (var i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+
+  /** バイト列 -> 小文字16進文字列（配列joinで巨大画像でも一括連結を避ける）。 */
+  function bytesToHexLower(bytes) {
+    var arr = new Array(bytes.length);
+    for (var i = 0; i < bytes.length; i++) arr[i] = hex2(bytes[i]);
+    return arr.join('');
+  }
+
+  /** PNGバイト列からpxサイズを取得する。シグネチャ不一致/データ不足ならnull。 */
+  function parsePngPixelSize(bytes) {
+    if (bytes.length < 24) return null;
+    if (bytes[0] !== 0x89 || bytes[1] !== 0x50 || bytes[2] !== 0x4e || bytes[3] !== 0x47) return null; // \x89PNG
+    var width = ((bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19]) >>> 0;
+    var height = ((bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23]) >>> 0;
+    if (!width || !height) return null;
+    return { width: width, height: height };
+  }
+
+  /** JPEGバイト列からpxサイズを取得する（SOF0/SOF2マーカー0xFFC0/0xFFC2を走査）。取得不能ならnull。 */
+  function parseJpegPixelSize(bytes) {
+    var n = bytes.length;
+    if (n < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) return null; // SOI
+    var i = 2;
+    while (i + 3 < n) {
+      if (bytes[i] !== 0xff) { i++; continue; }
+      var marker = bytes[i + 1];
+      if (marker === 0xff) { i++; continue; } // fill byte
+      if ((marker >= 0xd0 && marker <= 0xd9) || marker === 0x01) { i += 2; continue; } // 長さフィールドを持たないマーカー
+      if (i + 3 >= n) return null;
+      var segLen = (bytes[i + 2] << 8) | bytes[i + 3];
+      if (marker === 0xc0 || marker === 0xc2) {
+        if (i + 8 >= n) return null;
+        var height = (bytes[i + 5] << 8) | bytes[i + 6];
+        var width = (bytes[i + 7] << 8) | bytes[i + 8];
+        if (!width || !height) return null;
+        return { width: width, height: height };
+      }
+      if (marker === 0xda) return null; // Start Of Scan: これ以降ヘッダは無い
+      i += 2 + segLen;
+    }
+    return null;
+  }
+
+  /**
+   * <img src="data:image/png|jpeg;base64,..."> 要素を {\pict\pngblip|jpegblip ...<hex>} に変換する。
+   * data: 以外のsrc（http(s)://等）や、png/jpeg以外のMIMEタイプは非対応としてnullを返す（何も出力しない）。
+   * 寸法が取得できた場合のみ \picw\pich\picwgoal\pichgoal を付与する（取得不能なら省略し、RichEdit側の既定に委ねる）。
+   */
+  function imgElementToPictToken(el) {
+    var src = el.getAttribute ? el.getAttribute('src') : null;
+    var parsed = parseDataUriImage(src);
+    if (!parsed) return null;
+
+    var blipKeyword;
+    if (parsed.mime === 'image/png') blipKeyword = '\\pngblip';
+    else if (parsed.mime === 'image/jpeg' || parsed.mime === 'image/jpg') blipKeyword = '\\jpegblip';
+    else return null; // 非対応MIME（gif/svg等）は出力しない
+
+    var bytes;
+    try { bytes = base64ToBytes(parsed.base64); } catch (e) { return null; }
+    if (!bytes || bytes.length === 0) return null;
+
+    var dim = blipKeyword === '\\pngblip' ? parsePngPixelSize(bytes) : parseJpegPixelSize(bytes);
+    var sizeTokens = '';
+    if (dim && dim.width > 0 && dim.height > 0) {
+      sizeTokens = '\\picw' + dim.width + '\\pich' + dim.height +
+        '\\picwgoal' + (dim.width * 15) + '\\pichgoal' + (dim.height * 15);
+    }
+    var hex = bytesToHexLower(bytes);
+    return '{\\pict' + blipKeyword + sizeTokens + ' ' + hex + '}';
+  }
+
+  // =====================================================================
   // 7. htmlToRtf: 本体
   // =====================================================================
 
@@ -2192,6 +2508,11 @@ button > .btn-ico:only-child { margin-right: 0; }
         } else if (child.nodeType === 1) {
           var tag = child.tagName.toLowerCase();
           if (tag === 'br') { out.push('\\line '); continue; }
+          if (tag === 'img') {
+            var pictToken = imgElementToPictToken(child);
+            if (pictToken) out.push(pictToken);
+            continue;
+          }
           if (tag === 'script' || tag === 'style') continue;
           var childFmt = deriveFmt(child, fmt);
           walkInline(child, childFmt);
@@ -2842,7 +3163,16 @@ button > .btn-ico:only-child { margin-right: 0; }
   // =====================================================================
 
   var AUTOSAVE_KEY = 'nanaweb.autosave';
+  var SETTINGS_KEY = 'nanaweb.settings';
   var STATE_COLORS = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#1abc9c', '#3498db', '#9b59b6', '#34495e'];
+
+  // ツール→設定 で編集できるアプリ設定。localStorage(nanaweb.settings)にJSONで保存する。
+  var settings = {
+    theme: 'light',        // 'light' | 'dark'
+    confirmDelete: true,   // ノード削除時に確認ダイアログを出すか
+    autosave: true,        // 自動保存を行うか
+    defaultFont: ''        // 新規本文の既定フォント（空なら指定なし）
+  };
 
   var state = {
     doc: { title: '無題', roots: [] },
@@ -2875,6 +3205,8 @@ button > .btn-ico:only-child { margin-right: 0; }
 
   function init() {
     cacheDom();
+    loadSettings();
+    applySettings();
 
     if (!hasNanaRTF()) {
       dom.rtfMissingBanner.hidden = false;
@@ -2894,6 +3226,7 @@ button > .btn-ico:only-child { margin-right: 0; }
     wireTreeKeyboard();
     wireSearch();
     wireInsertDialogs();
+    wireSettingsDialog();
     buildMenuBar();
     window.addEventListener('beforeunload', function (e) {
       if (state.docDirty) { e.preventDefault(); e.returnValue = ''; }
@@ -2920,7 +3253,9 @@ button > .btn-ico:only-child { margin-right: 0; }
       'fontSizeSelect', 'fontNameSelect', 'foreColorInput', 'hiliteColorInput', 'btnHiliteOff', 'btnRemoveFormat',
       'btnInsertLink', 'btnUnlink',
       'statusMessage', 'autosaveStatus', 'contextMenu', 'dndOverlay', 'fileInput',
-      'imageFileInput', 'tableDialog', 'tableRowsInput', 'tableColsInput', 'btnTableOk', 'btnTableCancel'
+      'imageFileInput', 'tableDialog', 'tableRowsInput', 'tableColsInput', 'btnTableOk', 'btnTableCancel',
+      'settingsDialog', 'settingsThemeLight', 'settingsThemeDark', 'settingsConfirmDelete', 'settingsAutosave',
+      'settingsDefaultFont', 'btnSettingsOk', 'btnSettingsCancel'
     ];
     ids.forEach(function (id) {
       if (!id) return;
@@ -3258,7 +3593,7 @@ button > .btn-ico:only-child { margin-right: 0; }
     var msg = count > 0
       ? '「' + label + '」と、その子ノード ' + count + ' 件をすべて削除します。この操作は取り消せません。よろしいですか？'
       : '「' + label + '」を削除します。この操作は取り消せません。よろしいですか？';
-    if (!window.confirm(msg)) return;
+    if (settings.confirmDelete && !window.confirm(msg)) return;
 
     var ctx = findNodeContext(sel);
     if (!ctx) return;
@@ -4138,6 +4473,78 @@ button > .btn-ico:only-child { margin-right: 0; }
     });
   }
 
+  // =====================================================================
+  // 設定（ツール→設定）
+  // =====================================================================
+
+  // localStorage(nanaweb.settings)から読み込む。無ければ既定値のまま。
+  function loadSettings() {
+    var raw = null;
+    try { raw = localStorage.getItem(SETTINGS_KEY); } catch (err) { /* 無視 */ }
+    if (!raw) return;
+    try {
+      var data = JSON.parse(raw);
+      if (data && typeof data === 'object') {
+        if (data.theme === 'dark' || data.theme === 'light') settings.theme = data.theme;
+        if (typeof data.confirmDelete === 'boolean') settings.confirmDelete = data.confirmDelete;
+        if (typeof data.autosave === 'boolean') settings.autosave = data.autosave;
+        if (typeof data.defaultFont === 'string') settings.defaultFont = data.defaultFont;
+      }
+    } catch (err) { /* 壊れたJSONは無視して既定値を使う */ }
+  }
+
+  function saveSettings() {
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (err) { /* 無視 */ }
+  }
+
+  // 現在の settings を実際の画面へ反映する（テーマ・既定フォント）。
+  function applySettings() {
+    document.documentElement.setAttribute('data-theme', settings.theme === 'dark' ? 'dark' : 'light');
+    if (dom.fontNameSelect && settings.defaultFont) {
+      var hasOption = Array.prototype.some.call(dom.fontNameSelect.options, function (o) { return o.value === settings.defaultFont; });
+      if (hasOption) dom.fontNameSelect.value = settings.defaultFont;
+    }
+    if (dom.editorContent) {
+      dom.editorContent.style.fontFamily = settings.defaultFont || '';
+    }
+  }
+
+  function openSettings() {
+    if (!dom.settingsDialog) return;
+    dom.settingsThemeLight.checked = (settings.theme !== 'dark');
+    dom.settingsThemeDark.checked = (settings.theme === 'dark');
+    dom.settingsConfirmDelete.checked = !!settings.confirmDelete;
+    dom.settingsAutosave.checked = !!settings.autosave;
+    dom.settingsDefaultFont.value = settings.defaultFont || '';
+    dom.settingsDialog.hidden = false;
+  }
+
+  function closeSettingsDialog() {
+    dom.settingsDialog.hidden = true;
+  }
+
+  function applySettingsFromDialog() {
+    settings.theme = dom.settingsThemeDark.checked ? 'dark' : 'light';
+    settings.confirmDelete = !!dom.settingsConfirmDelete.checked;
+    settings.autosave = !!dom.settingsAutosave.checked;
+    settings.defaultFont = dom.settingsDefaultFont.value || '';
+    saveSettings();
+    applySettings();
+    setStatus('設定を保存しました。');
+  }
+
+  function wireSettingsDialog() {
+    if (!dom.settingsDialog) return;
+    dom.btnSettingsOk.addEventListener('click', function () {
+      closeSettingsDialog();
+      applySettingsFromDialog();
+    });
+    dom.btnSettingsCancel.addEventListener('click', closeSettingsDialog);
+    dom.settingsDialog.addEventListener('click', function (e) {
+      if (e.target === dom.settingsDialog) closeSettingsDialog();   // オーバーレイクリックで閉じる
+    });
+  }
+
   function focusFontSelect() {
     if (dom.fontNameSelect) dom.fontNameSelect.focus();
   }
@@ -4145,18 +4552,19 @@ button > .btn-ico:only-child { margin-right: 0; }
   // 形式を選択して貼り付け（テキストとして貼り付け）: クリップボードの内容を書式なしで挿入する。
   async function pasteAsPlainText() {
     if (dom.editorContent.contentEditable !== 'true') { setStatus('本文を選択してから使ってください。', true); return; }
-    if (!navigator.clipboard || !navigator.clipboard.readText) {
-      setStatus('このブラウザはクリップボードの読み取りに対応していません。', true);
-      return;
+    var text = null;
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      try {
+        text = await navigator.clipboard.readText();
+      } catch (err) {
+        text = null;   // 権限拒否など。下のprompt()フォールバックへ
+      }
     }
-    var text;
-    try {
-      text = await navigator.clipboard.readText();
-    } catch (err) {
-      setStatus('クリップボードを読めませんでした。', true);
-      return;
+    if (!text) {
+      // クリップボード読み取りが使えない/失敗した環境向けのフォールバック。
+      text = window.prompt('貼り付けるテキストを入力（貼り付け）してください:', '');
     }
-    if (!text) { setStatus('クリップボードにテキストがありません。', true); return; }
+    if (!text) { setStatus('貼り付けるテキストがありません。', true); return; }
     dom.editorContent.focus();
     restoreSelection();
     try { document.execCommand('insertText', false, text); } catch (e) { /* 無視 */ }
@@ -4372,7 +4780,7 @@ button > .btn-ico:only-child { margin-right: 0; }
         { label: '表...', fn: openTableDialog },
       ]},
       { label: 'ツール', items: [
-        { label: '設定...', disabled: true },
+        { label: '設定...', fn: openSettings },
         { label: 'キー割付...', disabled: true },
       ]},
       { label: 'ヘルプ', items: [
@@ -4927,6 +5335,10 @@ button > .btn-ico:only-child { margin-right: 0; }
   }
 
   function doAutosave() {
+    if (settings.autosave === false) {
+      if (dom.autosaveStatus) dom.autosaveStatus.textContent = '自動保存: OFF（設定で無効）';
+      return;
+    }
     // 巨大文書ではdoc全体のJSON.stringifyがGB級メモリと数秒のUIフリーズを招き、しかも
     // localStorage(約5MB)には入りきらず必ず失敗する。事前にサイズを見積もって自動保存を
     // スキップする（手動保存は使える）。小さい文書を開き直せば自動的に再開する。
